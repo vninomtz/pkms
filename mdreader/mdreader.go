@@ -25,7 +25,7 @@ func Read(file string) (*MdFile, error) {
     return nil, err
   }
 
-  meta := make(map[interface{}]interface{})
+  meta := make(map[string]interface{})
   err = yaml.Unmarshal(reader.Meta(), &meta)
   if err != nil {
     fmt.Println(err)
@@ -52,7 +52,7 @@ type mdReader struct {
 }
 
 type MdFile struct{
-  Meta map[interface{}]interface{}
+  Meta map[string]interface{}
   Content string
 }
 

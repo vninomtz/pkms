@@ -4,6 +4,7 @@ import (
 	"io"
 	"io/fs"
 	"path/filepath"
+	"strings"
 
 	"github.com/vninomtz/swe-notes/mdreader"
 	"github.com/vninomtz/swe-notes/model"
@@ -39,7 +40,7 @@ func Run(root string, out io.Writer, cfg Config) ([]*model.Note, error)  {
         return err
       }
       nt := &model.Note{
-        Name: info.Name(),
+        Name: strings.TrimSuffix(info.Name(), cfg.Ext),
         Content: md.Content,
         Meta: md.Meta,
         Size: info.Size(),
