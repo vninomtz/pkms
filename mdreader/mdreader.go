@@ -3,17 +3,18 @@ package mdreader
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"io"
 	"os"
+	"gopkg.in/yaml.v3"
+  "fmt"
 )
 
-func Read(file string) error {
+func Read(file string) (*MdFile, error) {
   var err error
   
   f, err := os.Open(file)
   if err != nil {
-    return err
+    return nil, err
   }
   defer f.Close()
 
@@ -21,13 +22,19 @@ func Read(file string) error {
 
   err = reader.extract()
   if err != nil {
-    return err
+    return nil, err
   }
 
-  fmt.Println(reader.init)
-  //fmt.Println(string(reader.Meta()))
-  fmt.Println(string(reader.Content()))
-  return nil
+  meta := make(map[interface{}]interface{})
+  err = yaml.Unmarshal(reader.Meta(), &meta)
+  if err != nil {
+    fmt.Println(err)
+  }
+  md := &MdFile{
+    Meta: meta,
+    Content: string(reader.Content()) ,
+  }
+  return md, nil
 
 }
 
@@ -45,8 +52,8 @@ type mdReader struct {
 }
 
 type MdFile struct{
-  meta string
-  content string
+  Meta map[interface{}]interface{}
+  Content string
 }
 
 func newMdReader(r io.Reader) *mdReader{
@@ -104,7 +111,6 @@ func (m *mdReader) readLine() ([]byte, bool, error)  {
   }
 
   // save byte position
-  //fmt.Printf("current: %d",len(line))
   m.current += len(line)
   _, err = m.output.Write(line)
   return line, isEOF, err
