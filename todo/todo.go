@@ -75,3 +75,17 @@ func (t *Tasks) Get(filename string) error {
 
 	return json.Unmarshal(file, t)
 }
+
+// Implements the fmt.Stringer interface
+func (t *Tasks) String() string {
+  formatted := ""
+  for k, t := range *t {
+    prefix := "  "
+    if t.Done {
+      prefix = "X "
+    }
+    // Adjust the item number k to print numbers starting from 1 instead of 0
+    formatted += fmt.Sprintf("%s%d: %s\n", prefix, k+1, t.Name)
+  }
+  return formatted
+}
