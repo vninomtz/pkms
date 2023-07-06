@@ -3,81 +3,98 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
-	"strings"
-	"time"
+	"os"
+	"os/exec"
 
 	"github.com/vninomtz/swe-notes/internal"
 )
 
-func main() {
-	DB_PATH := "./database/nodes.db"
+const (
+	DB_NOTES_PATH  = "DB_NOTES_PATH"
+	DIR_NOTES_PATH = "DIR_NOTES_PATH"
+)
 
-	repo := internal.NewRepository(DB_PATH)
+func main() {
+	os.Setenv(DB_NOTES_PATH, "/Users/vnino/github.com/vninomtz/swe-notes/database/nodes.db")
+	os.Setenv(DIR_NOTES_PATH, "/Users/vnino/github.com/vninomtz/vnotes/docs")
+	DB_PATH := os.Getenv(DB_NOTES_PATH)
+	DIR_PATH := os.Getenv(DIR_NOTES_PATH)
 
 	create := flag.Bool("new", false, "New note")
+	fs := flag.Bool("fs", false, "Use file system repo")
 	list := flag.Bool("ls", false, "List notes")
-	purge := flag.Bool("purge", false, "Purge notes")
-	title := flag.String("t", "", "Note tile")
-	content := flag.String("c", "", "Note content")
+	title := flag.String("name", "", "Note title")
+	content := flag.String("c", "", "Note inline content")
 
 	flag.Parse()
 
+	repo := internal.NewSqliteNodeRepo(DB_PATH)
+
+	if *fs {
+		repo = internal.NewFsRepo(DIR_PATH)
+	}
+
+	srv := internal.NewNoteService(repo)
+
 	if *create {
-		NewNote(repo, *title, *content)
+		if *content != "" {
+			srv.New(*title, *content)
+			return
+		}
+		input, err := ReadInputFromEditor()
+		if err != nil {
+			fmt.Println(err)
+			panic(1)
+		}
+		srv.New(*title, string(input))
 	}
 
 	if *list {
-		ListNotes(repo)
-	}
-	if *purge {
-		CheckError(repo.Clean())
-	}
-}
-
-func NewNote(repo *internal.SQLiteRepository, title, content string) {
-	if content == "" {
-		log.Fatal("Empty content")
-	}
-	if title == "" {
-		title = NewTimeId()
-	}
-	note := internal.Node{
-		Title:       title,
-		Description: content,
-		Type:        "Note",
-	}
-	err := repo.Save(note)
-	CheckError(err)
-}
-
-func ListNotes(repo *internal.SQLiteRepository) {
-	notes, err := repo.GetNodes()
-	CheckError(err)
-
-	for _, n := range notes {
-		fmt.Printf("%d %s: %s\n", n.Id, n.Title, n.Description)
+		notes, err := srv.ListAll()
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, n := range notes {
+			fmt.Printf("> %s\n", n.Title)
+		}
 	}
 }
 
-func CheckError(err error) {
+func ReadInputFromEditor() ([]byte, error) {
+	file, err := ioutil.TempFile(os.TempDir(), "swenotes")
 	if err != nil {
-		log.Fatal(err)
+		return []byte{}, err
 	}
+	filename := file.Name()
+	defer os.Remove(filename)
+
+	if err = file.Close(); err != nil {
+		return []byte{}, err
+	}
+
+	if err = OpenFileInEditor(filename); err != nil {
+		return []byte{}, err
+	}
+
+	bytes, err := os.ReadFile(filename)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return bytes, nil
 }
 
-const (
-	// YYYY-MM-DD: 2022-03-23
-	YYYYMMDD = "2006-01-02"
-	// 24h hh:mm:ss: 14:23:20
-	HHMMSS24h = "15:04:05"
-)
-
-func NewTimeId() string {
-	t := time.Now()
-
-	date := strings.Join(strings.Split(t.Format(YYYYMMDD), "-"), "")
-	timeF := strings.Join(strings.Split(t.Format(HHMMSS24h), ":"), "")
-
-	return fmt.Sprintf("%s%s", date, timeF)
+func OpenFileInEditor(filename string) error {
+	editor := "vim"
+	path, err := exec.LookPath(editor)
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command(path, filename)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
