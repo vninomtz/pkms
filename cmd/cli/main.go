@@ -17,15 +17,19 @@ const (
 )
 
 func main() {
-	os.Setenv(DB_NOTES_PATH, "/Users/vnino/github.com/vninomtz/swe-notes/database/nodes.db")
-	os.Setenv(DIR_NOTES_PATH, "/Users/vnino/github.com/vninomtz/vnotes/docs")
 	DB_PATH := os.Getenv(DB_NOTES_PATH)
 	DIR_PATH := os.Getenv(DIR_NOTES_PATH)
 
+	// commands
 	create := flag.Bool("new", false, "New note")
-	fs := flag.Bool("fs", false, "Use file system repo")
 	list := flag.Bool("ls", false, "List notes")
+	get := flag.Bool("get", false, "Get note")
+	find := flag.Bool("find", false, "Find notes")
+	// conf
+	fs := flag.Bool("fs", false, "Use file system repo")
+	// values
 	title := flag.String("name", "", "Note title")
+	tags := flag.String("tags", "", "Note tags")
 	content := flag.String("c", "", "Note inline content")
 
 	flag.Parse()
@@ -58,6 +62,26 @@ func main() {
 		}
 		for _, n := range notes {
 			fmt.Printf("> %s\n", n.Title)
+		}
+	}
+	if *get {
+		note, err := srv.GetByTitle(*title)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(note.Content)
+	}
+	if *find {
+		filters := []internal.Filter{}
+		filters = append(filters, internal.Filter{Field: "title", Value: *title})
+		filters = append(filters, internal.Filter{Field: "tags", Value: *tags})
+
+		notes, err := srv.Find(filters)
+		if err != nil {
+			log.Fatal(err)
+		}
+		for i, n := range notes {
+			fmt.Printf("%d. %s\n", i+1, n.Title)
 		}
 	}
 }

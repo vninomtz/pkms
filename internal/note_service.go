@@ -2,32 +2,24 @@ package internal
 
 import (
 	"errors"
-	"fmt"
+	"log"
 	"strings"
-	"time"
 )
 
 type noteService struct {
 	repo NodeRepository
 }
 
-func NewNoteService(repo NodeRepository) NoteService {
+func NewNoteService(repo NodeRepository) *noteService {
 	return &noteService{
 		repo: repo,
 	}
 }
 
 func (s *noteService) New(title, content string) error {
-	if content == "" {
-		return errors.New("Empty content")
-	}
-	if title == "" {
-		title = NewTimeId()
-	}
-	note := Node{
-		Title:   title,
-		Content: content,
-		Type:    "Note",
+	note, err := NewNote(title, content)
+	if err != nil {
+		return err
 	}
 	return s.repo.Save(note)
 }
@@ -40,18 +32,74 @@ func (s *noteService) ListAll() ([]Node, error) {
 	return notes, nil
 }
 
-const (
-	// YYYY-MM-DD: 2022-03-23
-	YYYYMMDD = "2006-01-02"
-	// 24h hh:mm:ss: 14:23:20
-	HHMMSS24h = "15:04:05"
-)
+func (s *noteService) GetByTitle(title string) (Node, error) {
+	notes, err := s.ListAll()
+	if err != nil {
+		return Node{}, err
+	}
+	found := -1
+	for i := 0; i < len(notes); i++ {
+		if notes[i].Title == title {
+			found = i
+			break
+		}
+	}
+	if found == -1 {
+		return Node{}, errors.New("Note note found")
+	}
 
-func NewTimeId() string {
-	t := time.Now()
+	return notes[found], nil
+}
 
-	date := strings.Join(strings.Split(t.Format(YYYYMMDD), "-"), "")
-	timeF := strings.Join(strings.Split(t.Format(HHMMSS24h), ":"), "")
+func filtersToMap(filters []Filter) map[string]string {
+	fields := map[string]bool{"title": true, "tags": true}
+	mapFilters := map[string]string{}
+	for _, v := range filters {
+		if v.Field != "" && fields[strings.ToLower(v.Field)] {
+			if v.Value != "" {
+				mapFilters[strings.ToLower(v.Field)] = v.Value
+			}
+		}
+	}
+	return mapFilters
+}
 
-	return fmt.Sprintf("%s%s", date, timeF)
+func (s *noteService) Find(_filters []Filter) ([]Node, error) {
+	notes, err := s.ListAll()
+	if err != nil {
+		return nil, err
+	}
+	filters := filtersToMap(_filters)
+
+	var founds []Node
+	for _, note := range notes {
+		if IncludeNote(filters, note) {
+			founds = append(founds, note)
+		}
+	}
+	return founds, nil
+}
+
+func IncludeNote(filters map[string]string, note Node) bool {
+	val, ok := filters["tags"]
+	if ok {
+		meta, err := ExtractMetadata(note.Content)
+		if err != nil {
+			log.Printf("Error extracting metadata from Note %v", note.Title)
+			return false
+		}
+		if !meta.IncludeTags(val) {
+			log.Printf("Tags %v no included in %v", val, note.Title)
+			return false
+		}
+	}
+	val, ok = filters["title"]
+	if ok {
+		source := strings.ToLower(note.Title)
+		target := strings.ToLower(val)
+		if !strings.Contains(source, target) {
+			return false
+		}
+	}
+	return true
 }
