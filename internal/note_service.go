@@ -7,21 +7,23 @@ import (
 )
 
 type noteService struct {
-	repo NodeRepository
+	repo   NodeRepository
+	logger *log.Logger
 }
 
-func NewNoteService(repo NodeRepository) *noteService {
+func NewNoteService(logger *log.Logger, repo NodeRepository) *noteService {
 	return &noteService{
-		repo: repo,
+		repo:   repo,
+		logger: logger,
 	}
 }
 
-func (s *noteService) New(title, content string) error {
+func (s *noteService) New(title, content string) (Node, error) {
 	note, err := NewNote(title, content)
 	if err != nil {
-		return err
+		return Node{}, err
 	}
-	return s.repo.Save(note)
+	return note, s.repo.Save(note)
 }
 
 func (s *noteService) ListAll() ([]Node, error) {
@@ -73,23 +75,22 @@ func (s *noteService) Find(_filters []Filter) ([]Node, error) {
 
 	var founds []Node
 	for _, note := range notes {
-		if IncludeNote(filters, note) {
+		if IncludeNote(filters, note, s.logger) {
 			founds = append(founds, note)
 		}
 	}
 	return founds, nil
 }
 
-func IncludeNote(filters map[string]string, note Node) bool {
+func IncludeNote(filters map[string]string, note Node, logger *log.Logger) bool {
 	val, ok := filters["tags"]
 	if ok {
 		meta, err := ExtractMetadata(note.Content)
 		if err != nil {
-			log.Printf("Error extracting metadata from Note %v", note.Title)
+			logger.Printf("Error extracting metadata from Note %v", note.Title)
 			return false
 		}
 		if !meta.IncludeTags(val) {
-			log.Printf("Tags %v no included in %v", val, note.Title)
 			return false
 		}
 	}

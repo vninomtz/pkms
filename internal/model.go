@@ -97,7 +97,7 @@ type NodeRepository interface {
 }
 
 type NoteService interface {
-	New(title, content string) error
+	New(title, content string) (Node, error)
 	ListAll() ([]Node, error)
 	GetByTitle(title string) (Node, error)
 	Find([]Filter) ([]Node, error)

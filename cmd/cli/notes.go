@@ -39,20 +39,28 @@ func main() {
 	if *fs {
 		repo = internal.NewFsRepo(DIR_PATH)
 	}
-
-	srv := internal.NewNoteService(repo)
+	logger := log.New(os.Stdout, "INFO: ", log.Ltime)
+	srv := internal.NewNoteService(logger, repo)
 
 	if *create {
-		if *content != "" {
-			srv.New(*title, *content)
-			return
+		var str string
+		if *content == "" {
+			input, err := ReadInputFromEditor()
+			if err != nil {
+				fmt.Println(err)
+				panic(1)
+			}
+			str = string(input)
+		} else {
+			str = *content
 		}
-		input, err := ReadInputFromEditor()
+
+		note, err := srv.New(*title, str)
 		if err != nil {
 			fmt.Println(err)
 			panic(1)
 		}
-		srv.New(*title, string(input))
+		fmt.Printf("%s", note.Title)
 	}
 
 	if *list {

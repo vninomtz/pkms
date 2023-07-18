@@ -1,6 +1,6 @@
 
 build-cli:
-	go build -o bin/cmd ./cmd/cli/main.go
+	go build -o bin/cmd ./cmd/cli/notes.go
 
 build-server:
 	go build -o bin/server ./cmd/server/main.go
