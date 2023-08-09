@@ -31,3 +31,8 @@ Options to open a note.
 - Output in stdout
 - Create tmp pdf file
 - Use a markdown preview tool
+
+## TODO
+
+- Improve the cli with [cobra](https://github.com/spf13/cobra) and [viper](https://github.com/spf13/viper)
+- Create a new method to display the Notes in console with better format

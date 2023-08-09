@@ -9,15 +9,17 @@ import (
 )
 
 type fsRepo struct {
-	path string
-	ext  string
-	size int64
+	path   string
+	ext    string
+	size   int64
+	logger *log.Logger
 }
 
-func NewFsRepo(dirRoot string) NodeRepository {
+func NewFsRepo(logger *log.Logger, dirRoot string) NodeRepository {
 	return &fsRepo{
-		path: dirRoot,
-		ext:  ".md",
+		path:   dirRoot,
+		ext:    ".md",
+		logger: logger,
 	}
 }
 
@@ -27,11 +29,11 @@ func (r *fsRepo) buildName(filename string) string {
 }
 
 func (r *fsRepo) Save(node Node) error {
-	log.Println(r.buildName(node.Title))
 	err := os.WriteFile(r.buildName(node.Title), []byte(node.Content), 0644)
 	if err != nil {
 		return err
 	}
+	r.logger.Println(r.buildName(node.Title))
 	return nil
 }
 
