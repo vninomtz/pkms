@@ -68,8 +68,8 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		for _, n := range notes {
-			fmt.Printf("> %s\n", n.Title)
+		for i, n := range notes {
+			fmt.Printf("%d     %s\n", i+1, n.Title)
 		}
 	}
 	if *get {
