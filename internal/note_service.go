@@ -34,6 +34,31 @@ func (s *noteService) ListAll() ([]Node, error) {
 	return notes, nil
 }
 
+func (s *noteService) ListAllTags() (map[string]int, error) {
+	tags := make(map[string]int)
+	notes, err := s.ListAll()
+	if err != nil {
+		return nil, err
+	}
+	for _, note := range notes {
+		meta, err := ExtractMetadata(note.Content)
+		if err != nil {
+			s.logger.Printf("Error extracting metadata from Note %v", note.Title)
+			continue
+		}
+		_tags := meta.GetTags()
+		for _, t := range _tags {
+			_, ok := tags[t]
+			if ok {
+				tags[t] = tags[t] + 1
+			} else {
+				tags[t] = 1
+			}
+		}
+	}
+	return tags, nil
+}
+
 func (s *noteService) GetByTitle(title string) (Node, error) {
 	notes, err := s.ListAll()
 	if err != nil {

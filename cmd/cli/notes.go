@@ -35,6 +35,7 @@ func main() {
 
 	// Ls command
 	cmdLs := flag.NewFlagSet("ls", flag.ExitOnError)
+	lsTags := cmdLs.Bool("t", false, "List all tags")
 
 	// Get Command
 	cmdGet := flag.NewFlagSet("get", flag.ExitOnError)
@@ -93,12 +94,22 @@ func main() {
 		}
 	case "ls":
 		cmdLs.Parse(os.Args[2:])
-		notes, err := srv.ListAll()
-		if err != nil {
-			logger.Fatalln(err)
-		}
-		for i, n := range notes {
-			fmt.Printf("%d     %s\n", i+1, n.Title)
+		if *lsTags {
+			tags, err := srv.ListAllTags()
+			if err != nil {
+				logger.Fatalln(err)
+			}
+			for k, v := range tags {
+				fmt.Printf("- %s:%d\n", k, v)
+			}
+		} else {
+			notes, err := srv.ListAll()
+			if err != nil {
+				logger.Fatalln(err)
+			}
+			for i, n := range notes {
+				fmt.Printf("%d     %s\n", i+1, n.Title)
+			}
 		}
 	default:
 		logger.Fatalln("Unknow subcommand")

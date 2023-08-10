@@ -81,6 +81,17 @@ func (m *Metadata) IncludeTags(str string) bool {
 	return true
 }
 
+func (m *Metadata) GetTags() []string {
+	_tags := []string{}
+	if m.Tags == "" {
+		return _tags
+	}
+	for _, v := range strings.Split(m.Tags, ",") {
+		_tags = append(_tags, strings.TrimSpace(v))
+	}
+	return _tags
+}
+
 func tagsToSet(str string) map[string]bool {
 	set := map[string]bool{}
 
@@ -99,6 +110,7 @@ type NodeRepository interface {
 type NoteService interface {
 	New(title, content string) (Node, error)
 	ListAll() ([]Node, error)
+	ListAllTags() (map[string]int, error)
 	GetByTitle(title string) (Node, error)
 	Find([]Filter) ([]Node, error)
 }
