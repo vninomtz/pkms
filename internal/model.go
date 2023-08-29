@@ -63,11 +63,39 @@ func NewTimeId() string {
 
 func ExtractMetadata(content string) (Metadata, error) {
 	md := Metadata{}
-	err := yaml.Unmarshal([]byte(content), &md)
+	err := yaml.Unmarshal([]byte(GetYaml(content)), &md)
 	if err != nil {
 		return Metadata{}, nil
 	}
 	return md, nil
+}
+
+func GetYaml(str string) string {
+	res := ""
+	queue := []string{}
+	lines := strings.Split(str, "\n")
+	open := false
+	end := false
+	for _, line := range lines {
+		tmp := strings.TrimSpace(line)
+		if tmp == "---" {
+			queue = append(queue, tmp)
+			if !open {
+				open = true
+			} else {
+				end = true
+				break
+			}
+		} else if open {
+			queue = append(queue, line)
+		}
+	}
+
+	if end {
+		res = strings.Join(queue, "\n")
+	}
+
+	return res
 }
 
 // Include tags check that all tags are included in the metadata

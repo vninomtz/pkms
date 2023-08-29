@@ -1,22 +1,43 @@
 package internal
 
-import "testing"
+import (
+	"fmt"
+	"os"
+	"testing"
+)
+
+const (
+	inputFile       = "../testdata/markdownFullSyntax.md"
+	metadataSection = `---
+title: "Hello Markdown"
+author: "Awesome Me"
+date: "2018-02-14"
+output: html_document
+tags: tag1, tag2, tag3
+---`
+)
 
 func TestExtractMetadata(t *testing.T) {
-	content := `---
-title: test
-tags: tag1, tag2
----
-
-  Content
-  `
-	expected := "tag1, tag2"
-	meta, err := ExtractMetadata(content)
+	expected := "tag1, tag2, tag3"
+	meta, err := ExtractMetadata(metadataSection)
 	if err != nil {
 		t.Errorf("No error expected get %s instead", err)
 	}
 	if meta.Tags != expected {
-		t.Errorf("Get %s expected %s instead", meta.Tags, expected)
+		t.Errorf("Expected %s, get instead %s", meta.Tags, expected)
+	}
+}
+
+func TestGetYaml(t *testing.T) {
+	input, err := os.ReadFile(inputFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	yaml := GetYaml(string(input))
+	if yaml != metadataSection {
+		fmt.Println(yaml)
+		t.Errorf("Expected %s, get instead %s", metadataSection, yaml)
 	}
 }
 
