@@ -29,12 +29,24 @@ type Node struct {
 	Type    NodeType
 	checked bool
 }
+type FileNode struct {
+	Name    string
+	Path    string
+	Content []byte
+	Parent  string
+	Size    int64
+	Meta    Meta
+}
 
 type Filter struct {
 	Field string
 	Value string
 }
 
+type Meta struct {
+	Title string
+	Tags  any
+}
 type Metadata struct {
 	Title string
 	Tags  string

@@ -1,6 +1,5 @@
 # Personal Knowledge Management Tools
 
-
 ## Goals
 
 Develop tools for a personal knowledge management such as:

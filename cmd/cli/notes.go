@@ -8,7 +8,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/vninomtz/swe-notes/internal"
+	"github.com/vninomtz/pkms/internal"
 )
 
 const (

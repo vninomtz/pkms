@@ -8,8 +8,7 @@ import (
 	"net/http"
 	"os"
 
-	//"github.com/vninomtz/swe-notes/internal"
-	"github.com/vninomtz/swe-notes/internal/search"
+	"github.com/vninomtz/pkms/internal/search"
 )
 
 const (
@@ -18,7 +17,7 @@ const (
 )
 
 func main() {
-	os.Setenv(DB_NOTES_PATH, "/Users/vnino/github.com/vninomtz/swe-notes/database/nodes.db")
+	os.Setenv(DB_NOTES_PATH, "/Users/vnino/github.com/vninomtz/pkms/database/nodes.db")
 	os.Setenv(DIR_NOTES_PATH, "/Users/vnino/Library/Mobile Documents/iCloud~md~obsidian/Documents/vnotes/docs")
 	//DB_PATH := os.Getenv(DB_NOTES_PATH)
 	DIR_PATH := os.Getenv(DIR_NOTES_PATH)
