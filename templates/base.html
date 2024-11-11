@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>{{.Title}}</title>
+	<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+	<script src="https://cdn.tailwindcss.com"></script>
+	<script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+
+
+</head>
+
+<body class="min-h-screen flex flex-col bg-gray-100 text-gray-900 font-sans">
+	<!-- Header -->
+	<header class="bg-blue-600 text-white py-4 shadow">
+		<div class="container mx-auto px-4">
+			<h1 class="text-2xl font-bold">Nombre del Blog</h1>
+			<nav aria-label="Main navigation" class="mt-2">
+				<ul class="flex space-x-4">
+					<li><a href="#" class="hover:underline">Inicio</a></li>
+					<li><a href="#" class="hover:underline">Posts</a></li>
+					<li><a href="#" class="hover:underline">Contacto</a></li>
+				</ul>
+			</nav>
+		</div>
+	</header>
+
+	<!-- Main content -->
+	<main class="w-full flex-grow" role="main">
+		<article aria-labelledby="post-title"
+			class="container mx-auto prose prose-base prose-a:text-blue-600 p-4">
+			{{.Body}}
+		</article>
+	</main>
+
+	<!-- Footer -->
+	<footer class="bg-gray-800 text-gray-400 text-center py-4">
+		<p>&copy; 2024 Nombre del Blog. Todos los derechos reservados.</p>
+	</footer>
+
+</body>
+
+</html>

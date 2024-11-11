@@ -3,6 +3,7 @@ package internal
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -22,6 +23,10 @@ const (
 	HHMMSS24h = "15:04:05"
 )
 
+type INode interface {
+	Name() string
+}
+
 type Node struct {
 	Id      int32
 	Title   string
@@ -30,12 +35,16 @@ type Node struct {
 	checked bool
 }
 type FileNode struct {
-	Name    string
-	Path    string
-	Content []byte
-	Parent  string
-	Size    int64
-	Meta    Meta
+	Filename string
+	Path     string
+	Content  []byte
+	Parent   string
+	Size     int64
+	Meta     Meta
+}
+
+func (n *FileNode) Name() string {
+	return strings.TrimSuffix(n.Filename, filepath.Ext(n.Filename))
 }
 
 type Filter struct {

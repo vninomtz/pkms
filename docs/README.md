@@ -1,6 +1,28 @@
 # Documentation
 
 
+## Collector
+
+- Provide an interface to get data from files or a database.
+- Support multi nodes but for the moment will only support *FileNode*
+
+```golang
+type collector interface{
+    Collect() ([]FileNode, error)
+}
+```
+
+## Searcher
+
+- Search, filter, and sort FileNodes
+- In the future I will implement a inner Tree data structure but for now only a simple List is enough
+
+```golang
+type Searcher interface {
+    File(filename string) (FileNode, error)
+}
+```
+
 ## Features
 
 - search by name
