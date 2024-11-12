@@ -16,3 +16,6 @@
 bin
 .env
 .env.*
+
+
+dist

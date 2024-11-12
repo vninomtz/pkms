@@ -17,6 +17,23 @@ const (
 )
 
 func main() {
+	if err := FileServerRun(); err != nil {
+		log.Printf("Error in server %v\n", err)
+	}
+}
+
+func FileServerRun() error {
+	port := flag.String("p", "8100", "port to serve on")
+	directory := flag.String("d", ".", "the directory of static file to host")
+	flag.Parse()
+
+	http.Handle("/", http.FileServer(http.Dir(*directory)))
+
+	log.Printf("Serving %s on HTTP port: %s\n", *directory, *port)
+	return http.ListenAndServe(":"+*port, nil)
+}
+
+func Server() {
 	os.Setenv(DB_NOTES_PATH, "/Users/vnino/github.com/vninomtz/pkms/database/nodes.db")
 	os.Setenv(DIR_NOTES_PATH, "/Users/vnino/Library/Mobile Documents/iCloud~md~obsidian/Documents/vnotes/docs")
 	//DB_PATH := os.Getenv(DB_NOTES_PATH)
