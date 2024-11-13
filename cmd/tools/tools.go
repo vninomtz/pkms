@@ -11,6 +11,7 @@ import (
 )
 
 func main() {
+	//cmd := flag.String("cmd", "", "Command to execute")
 	path := flag.String("p", "", "Path name")
 	tFile := flag.String("t", "", "Template file to parse")
 	preview := flag.String("pr", "", "Filename to preview if exists")
@@ -43,7 +44,8 @@ func Run(path, tFile, out, filename, build string) error {
 			return err
 		}
 
-		html, err := internal.ParseNodeToHTML(n.Content, tFile)
+		parser := internal.NewTemplateParser(tFile, "index.html")
+		html, err := parser.Parse(n) //internal.ParseNodeToHTML(n, tFile)
 		err = os.WriteFile(out, html, 0644)
 	}
 	if build != "" && tFile != "" {
@@ -61,7 +63,7 @@ func Save(nodes []internal.FileNode, tFile, outputDir string) error {
 	}
 
 	for _, n := range nodes {
-		html, err := internal.ParseNodeToHTML(n.Content, tFile)
+		html, err := internal.ParseNodeToHTML(n, tFile)
 		if err != nil {
 			return nil
 		}

@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 
+	"github.com/vninomtz/pkms/internal"
 	"github.com/vninomtz/pkms/internal/search"
 )
 
@@ -16,6 +19,17 @@ const (
 	DIR_NOTES_PATH = "DIR_NOTES_PATH"
 )
 
+type templateHandler struct {
+	tmpl *template.Template
+}
+
+func (t *templateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	data := map[string]interface{}{
+		"Host": r.Host,
+	}
+	t.tmpl.ExecuteTemplate(w, "layout", data)
+}
+
 func main() {
 	if err := FileServerRun(); err != nil {
 		log.Printf("Error in server %v\n", err)
@@ -23,11 +37,52 @@ func main() {
 }
 
 func FileServerRun() error {
+	lp := filepath.Join("./templates/", "*.html")
+	tmpl := template.Must(template.New("pkms").ParseGlob(lp))
 	port := flag.String("p", "8100", "port to serve on")
-	directory := flag.String("d", ".", "the directory of static file to host")
+	directory := flag.String("dir", "", "Directory to serve content")
 	flag.Parse()
 
-	http.Handle("/", http.FileServer(http.Dir(*directory)))
+	collector := internal.NewCollector(*directory, "")
+	nodes, err := collector.Collect()
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	searcher := internal.NewSearcher(nodes)
+
+	//http.Handle("/", http.FileServer(http.Dir(*directory)))
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if err := tmpl.ExecuteTemplate(w, "home", nil); err != nil {
+			w.Write([]byte("Unexpected error"))
+		}
+	})
+	http.HandleFunc("/writings/{slug}", func(w http.ResponseWriter, r *http.Request) {
+		slug := r.PathValue("slug")
+		n, err := searcher.File(slug)
+		if err != nil {
+			log.Printf("Error %v throw by File %s\n", err, slug)
+			w.Write([]byte("Not found"))
+			return
+		}
+		content, err := internal.MDToHTML(n.Content)
+		if err != nil {
+			log.Printf("Error %v to parse %s\n", err, slug)
+			w.Write([]byte("Unexpected error"))
+			return
+		}
+		pContent := struct {
+			Title string
+			Body  template.HTML
+		}{
+			Title: n.Name(),
+			Body:  template.HTML(content),
+		}
+
+		if err := tmpl.ExecuteTemplate(w, "layout", pContent); err != nil {
+			w.Write([]byte("Unexpected error"))
+		}
+	})
 
 	log.Printf("Serving %s on HTTP port: %s\n", *directory, *port)
 	return http.ListenAndServe(":"+*port, nil)

@@ -3,6 +3,7 @@ package internal
 import (
 	"bytes"
 	"html/template"
+	"path/filepath"
 
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
@@ -12,8 +13,38 @@ type content struct {
 	Title string
 	Body  template.HTML
 }
+type parser struct {
+	filename string
+	tmpl     *template.Template
+}
 
-func ParseNodeToHTML(input []byte, templateFile string) ([]byte, error) {
+func NewTemplateParser(pathTmp, templateName string) *parser {
+	lp := filepath.Join(pathTmp, "*.html")
+	t, _ := template.ParseGlob(lp)
+	return &parser{
+		filename: templateName,
+		tmpl:     t,
+	}
+}
+
+func (p *parser) Parse(node FileNode) ([]byte, error) {
+	html, err := p.MDToHTML(node.Content)
+	if err != nil {
+		return nil, err
+	}
+	c := content{
+		Title: node.Name(),
+		Body:  template.HTML(html),
+	}
+	var bufferHtml bytes.Buffer
+	if err := p.tmpl.ExecuteTemplate(&bufferHtml, "layout", c); err != nil {
+		return nil, err
+	}
+
+	return bufferHtml.Bytes(), nil
+}
+
+func (p *parser) MDToHTML(input []byte) (string, error) {
 	var buf bytes.Buffer
 
 	md := goldmark.New(
@@ -22,6 +53,33 @@ func ParseNodeToHTML(input []byte, templateFile string) ([]byte, error) {
 		)),
 	)
 	if err := md.Convert(input, &buf); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+func MDToHTML(input []byte) (string, error) {
+	var buf bytes.Buffer
+
+	md := goldmark.New(
+		goldmark.WithExtensions(highlighting.NewHighlighting(
+			highlighting.WithStyle("dracula"),
+		)),
+	)
+	if err := md.Convert(input, &buf); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+func ParseNodeToHTML(node FileNode, templateFile string) ([]byte, error) {
+	var buf bytes.Buffer
+
+	md := goldmark.New(
+		goldmark.WithExtensions(highlighting.NewHighlighting(
+			highlighting.WithStyle("dracula"),
+		)),
+	)
+	if err := md.Convert(node.Content, &buf); err != nil {
 		return nil, err
 	}
 
@@ -32,7 +90,7 @@ func ParseNodeToHTML(input []byte, templateFile string) ([]byte, error) {
 
 	//Instantiate the content type, adding the title and body
 	c := content{
-		Title: "Markdown Preview Tool",
+		Title: node.Name(),
 		Body:  template.HTML(buf.String()),
 	}
 
