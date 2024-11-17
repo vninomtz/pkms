@@ -1,14 +1,18 @@
 {{define "nav"}}
-<header class="sticky top-0 z-1 w-full border-b bg-white">
-	<div class="max-w-8xl mx-auto">
-		<nav class="py-4 mx-4 lg:mx-0 lg:px-8 text-slate-900">
-			<ul class="flex gap-4">
-				<li><a href="/">
-						<h1 class="font-bold"><a href="/">vic.aware</a></h1>
-					</a></li>
-				<li><a href="#" class="hover:underline">writings</a></li>
-			</ul>
-		</nav>
-	</div>
+<header class="sticky top-0 z-1 w-full pt-3 flex justify-center">
+	<nav class="bg-slate-950 rounded-lg p-1 shadow-md">
+		<ul class="flex gap-2 font-bold">
+			<li
+				class="h-9 bg-slate-50 text-black rounded-md flex items-center justify-center px-1 cursor-pointer">
+				<a href="/">
+					<h1 class="font-bold">vic.aware</h1>
+				</a>
+			</li>
+			<li
+				class="h-9 text-white rounded-md hover:bg-slate-50 hover:text-black px-1 flex items-center justify-center cursor-pointer">
+				<a href="/writings" class="">writings</a>
+			</li>
+		</ul>
+	</nav>
 </header>
 {{end}}

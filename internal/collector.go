@@ -11,8 +11,9 @@ import (
 )
 
 type collector struct {
-	Root string
-	Ext  string
+	Root  string
+	Ext   string
+	nodes []FileNode
 }
 
 func NewCollector(root, ext string) *collector {
@@ -23,6 +24,15 @@ func NewCollector(root, ext string) *collector {
 		Root: root,
 		Ext:  ext,
 	}
+}
+
+func (cfg *collector) ToMaps() []map[string]string {
+	list := []map[string]string{}
+
+	for _, n := range cfg.nodes {
+		list = append(list, n.ToMap())
+	}
+	return list
 }
 
 func (cfg *collector) Collect() ([]FileNode, error) {
@@ -54,5 +64,6 @@ func (cfg *collector) Collect() ([]FileNode, error) {
 		return nil
 	})
 
+	cfg.nodes = nodes
 	return nodes, err
 }

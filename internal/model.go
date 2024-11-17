@@ -46,6 +46,13 @@ type FileNode struct {
 func (n *FileNode) Name() string {
 	return strings.TrimSuffix(n.Filename, filepath.Ext(n.Filename))
 }
+func (n *FileNode) ToMap() map[string]string {
+	m := make(map[string]string)
+
+	m["Name"] = n.Name()
+
+	return m
+}
 
 type Filter struct {
 	Field string

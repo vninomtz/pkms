@@ -53,7 +53,26 @@ func FileServerRun() error {
 
 	//http.Handle("/", http.FileServer(http.Dir(*directory)))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if err := tmpl.ExecuteTemplate(w, "home", nil); err != nil {
+		content := struct {
+			Title string
+		}{
+			Title: "vic.aware",
+		}
+		if err := tmpl.ExecuteTemplate(w, "home", content); err != nil {
+			log.Println(err)
+			w.Write([]byte("Unexpected error"))
+		}
+	})
+	http.HandleFunc("/writings", func(w http.ResponseWriter, r *http.Request) {
+		content := struct {
+			Title string
+			Items []map[string]string
+		}{
+			Title: "Writings | vic.aware",
+			Items: collector.ToMaps(),
+		}
+		if err := tmpl.ExecuteTemplate(w, "writings", content); err != nil {
+			log.Println(err)
 			w.Write([]byte("Unexpected error"))
 		}
 	})
