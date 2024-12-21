@@ -51,7 +51,13 @@ func FileServerRun() error {
 	}
 	searcher := internal.NewSearcher(nodes)
 
-	//http.Handle("/", http.FileServer(http.Dir(*directory)))
+	indexSearch := search.NewSercher(*directory)
+	err = indexSearch.Index()
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		content := struct {
 			Title string
@@ -102,6 +108,46 @@ func FileServerRun() error {
 			w.Write([]byte("Unexpected error"))
 		}
 	})
+	http.HandleFunc("/api/search", func(w http.ResponseWriter, r *http.Request) {
+		query := r.URL.Query()
+		text := query.Get("q")
+		log.Printf("Search by: %s\n", text)
+		notes := indexSearch.Search(text)
+
+		res := &struct {
+			Body    interface{}
+			Records int
+		}{
+			Body:    notes,
+			Records: len(notes),
+		}
+		err = json.NewEncoder(w).Encode(res)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+		}
+
+	})
+	http.HandleFunc("/api/bookmarks", func(w http.ResponseWriter, r *http.Request) {
+		result, err := searcher.GetBookmarks()
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+
+		res := &struct {
+			Body    interface{}
+			Records int
+		}{
+			Body:    result,
+			Records: len(result),
+		}
+		err = json.NewEncoder(w).Encode(res)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+		}
+
+	})
+	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("./assets"))))
 
 	log.Printf("Serving %s on HTTP port: %s\n", *directory, *port)
 	return http.ListenAndServe(":"+*port, nil)

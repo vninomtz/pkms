@@ -1,8 +1,11 @@
 package internal
 
 import (
+	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"time"
@@ -52,6 +55,26 @@ func (n *FileNode) ToMap() map[string]string {
 	m["Name"] = n.Name()
 
 	return m
+}
+func (n *FileNode) Links() ([]string, error) {
+	links := []string{}
+	scanner := bufio.NewScanner(bytes.NewBuffer(n.Content))
+	scanner.Split(bufio.ScanWords)
+
+	for scanner.Scan() {
+		word := scanner.Text()
+		u, err := url.Parse(word)
+		if err == nil && u.Scheme != "" && u.Host != "" {
+			links = append(links, word)
+			continue
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return links, err
+	}
+
+	return links, nil
 }
 
 type Filter struct {

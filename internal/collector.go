@@ -58,7 +58,14 @@ func (cfg *collector) Collect() ([]FileNode, error) {
 				log.Printf("Error to parse the path %s: %v\n", path, err)
 				return err
 			}
-			n := FileNode{Filename: info.Name(), Path: path, Content: content, Parent: parent, Size: info.Size(), Meta: meta}
+			n := FileNode{
+				Filename: info.Name(),
+				Path:     path,
+				Content:  content,
+				Parent:   parent,
+				Size:     info.Size(),
+				Meta:     meta,
+			}
 			nodes = append(nodes, n)
 		}
 		return nil

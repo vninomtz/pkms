@@ -105,19 +105,13 @@ func (s *searcher) indexFile(fn string) bool {
 
 func (s *searcher) Search(str string) []string {
 	files := []string{}
-	fmt.Println(len(s.index), "words indexed in", len(s.indexed), "files")
-	fmt.Println("Looking for: " + str)
-	//fmt.Println("enter a blank line when done")
 	switch dl := s.index[str]; len(dl) {
 	case 0:
 		fmt.Println("no match")
 	case 1:
-		fmt.Println("One match:")
 		doc := s.indexed[dl[0]]
-		//fmt.Println("   ", doc.file)
 		files = append(files, doc.title)
 	default:
-		//fmt.Println(len(dl), "matches:")
 		for _, d := range dl {
 			doc := s.indexed[d]
 			fmt.Println("    ", doc.title)

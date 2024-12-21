@@ -1,6 +1,9 @@
 package internal
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 type Searcher interface {
 	File(filename string) (FileNode, error)
@@ -23,4 +26,19 @@ func (s *searcher) File(filename string) (FileNode, error) {
 		}
 	}
 	return FileNode{}, errors.New("NotFound")
+}
+func (s *searcher) GetBookmarks() ([]string, error) {
+	var bookmarks []string
+
+	for _, n := range s.nodes {
+		links, err := n.Links()
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			bookmarks = append(bookmarks, links...)
+
+		}
+
+	}
+	return bookmarks, nil
 }
