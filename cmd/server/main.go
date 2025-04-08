@@ -3,11 +3,9 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"html/template"
 	"log"
 	"net/http"
-	"os"
 	"path/filepath"
 
 	"github.com/vninomtz/pkms/internal"
