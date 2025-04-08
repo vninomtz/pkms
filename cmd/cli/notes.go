@@ -7,22 +7,43 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
 
 	"github.com/vninomtz/pkms/internal"
 )
 
+type StoreType int
+
 const (
-	DB_NOTES_PATH  = "DB_NOTES_PATH"
-	DIR_NOTES_PATH = "DIR_NOTES_PATH"
+	StoreFS = iota
+	StoreSQLite
+)
+
+const (
+	PKMS_STORE_PATH = "PKMS_STORE_PATH"
+	STORE_TYPE      = "PKMS_STORE_TYPE"
 )
 
 func main() {
-	//DB_PATH := os.Getenv(DB_NOTES_PATH)
-	DIR_PATH := os.Getenv(DIR_NOTES_PATH)
 	logger := log.New(os.Stdout, "INFO: ", log.Ltime)
 
-	//repo := internal.NewSqliteNodeRepo(DB_PATH)
-	repo := internal.NewFsRepo(logger, DIR_PATH)
+	source_path := os.Getenv(PKMS_STORE_PATH)
+	store_type, err := strconv.Atoi(os.Getenv(STORE_TYPE))
+	if err != nil {
+		logger.Fatal("Error parsing STORE_TYPE env")
+	}
+
+	var repo internal.NodeRepository
+
+	if store_type == StoreFS {
+		repo = internal.NewFsRepo(logger, source_path)
+	}
+	if store_type == StoreSQLite {
+		repo = internal.NewSqliteNodeRepo(source_path)
+	}
+	if repo == nil {
+		logger.Fatal("Error: Unknown Store Type")
+	}
 
 	srv := internal.NewNoteService(logger, repo)
 
