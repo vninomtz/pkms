@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/yaml.v3"
+	"github.com/adrg/frontmatter"
 )
 
 type NodeType string
@@ -31,11 +31,17 @@ type INode interface {
 }
 
 type Node struct {
-	Id      int32
-	Title   string
-	Content string
-	Type    NodeType
-	checked bool
+	Id       string   `json:"id"`
+	Filename string   `json:"-"`
+	Path     string   `json:"-"`
+	Title    string   `json:"title"`
+	Parent   string   `json:"-"`
+	Bytes    []byte   `json:"-"`
+	Content  string   `json:"content"`
+	Size     int64    `json:"-"`
+	Type     NodeType `json:"-"`
+	Meta     Metadata `json:"metadata"`
+	Html     string   `json:"html"`
 }
 type FileNode struct {
 	Filename string
@@ -87,8 +93,7 @@ type Meta struct {
 	Tags  any
 }
 type Metadata struct {
-	Title string
-	Tags  string
+	Tags []string `json:"tags"`
 }
 
 func NewNote(title, content string) (Node, error) {
@@ -112,13 +117,32 @@ func NewTimeId() string {
 	return fmt.Sprintf("%s%s", date, timeF)
 }
 
-func ExtractMetadata(content string) (Metadata, error) {
-	md := Metadata{}
-	err := yaml.Unmarshal([]byte(GetYaml(content)), &md)
+func ExtractMetadata(raw []byte) ([]byte, Metadata, error) {
+	var metadata Metadata
+	var data map[string]interface{}
+	content, err := frontmatter.Parse(bytes.NewReader(raw), &data)
+	tags, ok := data["tags"]
 	if err != nil {
-		return Metadata{}, nil
+		return content, metadata, err
 	}
-	return md, nil
+	if !ok {
+		return content, metadata, nil
+	}
+	switch v := tags.(type) {
+	case string:
+		metadata.Tags = append(metadata.Tags, v)
+	case []interface{}:
+		var stringTags []string
+		for _, item := range v {
+			str, ok := item.(string)
+			if ok {
+				stringTags = append(stringTags, str)
+			}
+		}
+		metadata.Tags = stringTags
+	}
+
+	return content, metadata, nil
 }
 
 func GetYaml(str string) string {
@@ -160,21 +184,9 @@ func (m *Metadata) IncludeTags(str string) bool {
 	return true
 }
 
-func (m *Metadata) GetTags() []string {
-	_tags := []string{}
-	if m.Tags == "" {
-		return _tags
-	}
-	for _, v := range strings.Split(m.Tags, ",") {
-		_tags = append(_tags, strings.TrimSpace(v))
-	}
-	return _tags
-}
-
-func tagsToSet(str string) map[string]bool {
+func tagsToSet(tags []string) map[string]bool {
 	set := map[string]bool{}
 
-	tags := strings.Split(str, ",")
 	for _, v := range tags {
 		set[strings.TrimSpace(v)] = true
 	}

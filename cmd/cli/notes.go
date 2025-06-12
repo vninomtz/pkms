@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -65,6 +66,7 @@ func main() {
 	cmdFind := flag.NewFlagSet("find", flag.ExitOnError)
 	findTitle := cmdFind.String("n", "", "Note title")
 	findTags := cmdFind.String("t", "", "Note tags")
+	hasToExport := cmdFind.Bool("exp", false, "Export result")
 
 	if len(os.Args) < 2 {
 		logger.Fatalln("Expected one subcommand")
@@ -112,6 +114,10 @@ func main() {
 		}
 		for i, n := range notes {
 			fmt.Printf("%d. %s\n", i+1, n.Title)
+		}
+		if *hasToExport {
+			ExportNotes(notes)
+
 		}
 	case "ls":
 		cmdLs.Parse(os.Args[2:])
@@ -172,4 +178,15 @@ func OpenFileInEditor(filename string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+func ExportNotes(notes []internal.Node) {
+	res, err := json.Marshal(notes)
+	if err != nil {
+		log.Fatal("Unexpected error parsing json: ", err)
+	}
+	err = os.WriteFile("output.json", res, 0644)
+	if err != nil {
+		log.Fatal("Unexpected error writing file: ", err)
+	}
 }

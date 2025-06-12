@@ -45,14 +45,30 @@ func (r *fsRepo) GetNodes() ([]Node, error) {
 			return err
 		}
 		if filepath.Ext(path) == r.ext {
-			data, err := os.ReadFile(path)
+			dir := filepath.Dir(path)
+			parent := filepath.Base(dir)
+			raw, err := os.ReadFile(path)
+
+			var meta Metadata
+			// content, err := frontmatter.Parse(bytes.NewReader(raw), &meta)
+			content, meta, err := ExtractMetadata(raw)
+
 			if err != nil {
-				log.Printf("Error reading file: %s", err)
-				return err
+				log.Printf("Error unmarshaling metadata of file %s: Error %s", path, err)
+				// return err
+				content = raw
 			}
+			noteName := strings.TrimSuffix(info.Name(), r.ext)
 			n := Node{
-				Title:   strings.TrimSuffix(info.Name(), r.ext),
-				Content: string(data),
+				Id:       noteName,
+				Filename: info.Name(),
+				Title:    noteName,
+				Bytes:    raw,
+				Path:     path,
+				Parent:   parent,
+				Content:  string(content),
+				Meta:     meta,
+				Size:     info.Size(),
 			}
 			nodes = append(nodes, n)
 		}

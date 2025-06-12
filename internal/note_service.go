@@ -41,13 +41,8 @@ func (s *noteService) ListAllTags() (map[string]int, error) {
 		return nil, err
 	}
 	for _, note := range notes {
-		meta, err := ExtractMetadata(note.Content)
-		if err != nil {
-			s.logger.Printf("Error extracting metadata from Note %v", note.Title)
-			continue
-		}
-		_tags := meta.GetTags()
-		for _, t := range _tags {
+		meta := note.Meta
+		for _, t := range meta.Tags {
 			_, ok := tags[t]
 			if ok {
 				tags[t] = tags[t] + 1
@@ -101,6 +96,12 @@ func (s *noteService) Find(_filters []Filter) ([]Node, error) {
 	var founds []Node
 	for _, note := range notes {
 		if IncludeNote(filters, note, s.logger) {
+			html, err := MDToHTML([]byte(note.Content))
+			if err != nil {
+				log.Printf("Error parsing MD to Html for note %s", note.Title)
+			} else {
+				note.Html = html
+			}
 			founds = append(founds, note)
 		}
 	}
@@ -110,11 +111,7 @@ func (s *noteService) Find(_filters []Filter) ([]Node, error) {
 func IncludeNote(filters map[string]string, note Node, logger *log.Logger) bool {
 	val, ok := filters["tags"]
 	if ok {
-		meta, err := ExtractMetadata(note.Content)
-		if err != nil {
-			logger.Printf("Error extracting metadata from Note %v", note.Title)
-			return false
-		}
+		meta := note.Meta
 		if !meta.IncludeTags(val) {
 			return false
 		}
