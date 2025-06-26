@@ -1,8 +1,10 @@
 import dog from "./assets/dog.svg";
 import notes from "./assets/notes.json";
 import ArrowDown from "./assets/ArrowDown.svg";
+import { useMemo } from "react";
 
 function App() {
+  const items = useMemo(() => notes.sort(() => Math.random() - 0.5), []);
   return (
     <main className="bg-neutral-50 text-base">
       <header className="m-auto h-screen flex justify-center items-center">
@@ -22,7 +24,7 @@ function App() {
       </header>
       <section className="px-4">
         <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 auto-rows-[8rem] gap-4">
-          {notes.map((n) => (
+          {items.map((n) => (
             <NoteItem key={n.id} note={n} />
           ))}
         </ul>
