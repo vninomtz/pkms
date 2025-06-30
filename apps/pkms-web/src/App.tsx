@@ -10,7 +10,7 @@ function App() {
       <header className="m-auto h-screen flex justify-center items-center">
         <div className="flex flex-col items-center gap-2">
           <div className="flex justify-center">
-            <img src={dog} />
+            <img title={import.meta.env.VITE_APP_VERSION} src={dog} />
           </div>
           <p className="text-slate-900/75 w-3/4 sm:w-2/4">
             I write when my mind is full of noise, and I take notes when I find
