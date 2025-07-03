@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"strconv"
@@ -67,6 +69,10 @@ func main() {
 	findTitle := cmdFind.String("n", "", "Note title")
 	findTags := cmdFind.String("t", "", "Note tags")
 	hasToExport := cmdFind.Bool("exp", false, "Export result")
+
+	// Share Command
+	cmdShare := flag.NewFlagSet("share", flag.ExitOnError)
+	findTitle = cmdShare.String("n", "", "Note title")
 
 	if len(os.Args) < 2 {
 		logger.Fatalln("Expected one subcommand")
@@ -138,13 +144,31 @@ func main() {
 				fmt.Printf("%d     %s\n", i+1, n.Title)
 			}
 		}
+	case "share":
+		cmdShare.Parse(os.Args[2:])
+		n, err := srv.GetByTitle(*findTitle)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(n.Html)
+		key := internal.RandomKey(16)
+		encrypted, err := internal.Encrypt([]byte(n.Html), []byte(key))
+		if err != nil {
+			log.Fatal(err)
+		}
+		res, err := ShareNote(encrypted)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("https://notas.vninomtz.xyz/notes/%s#%s", res, key)
+
 	default:
 		logger.Fatalln("Unknow subcommand")
 	}
 }
 
 func ReadInputFromEditor() ([]byte, error) {
-	file, err := ioutil.TempFile(os.TempDir(), "swenotes")
+	file, err := os.CreateTemp(os.TempDir(), "swenotes")
 	if err != nil {
 		return []byte{}, err
 	}
@@ -189,4 +213,42 @@ func ExportNotes(notes []internal.Node) {
 	if err != nil {
 		log.Fatal("Unexpected error writing file: ", err)
 	}
+}
+
+func ShareNote(content string) (string, error) {
+	url := "https://shareapi.vninomtz.xyz/share"
+
+	var request struct {
+		Content string `json:"Content"`
+	}
+	request.Content = content
+
+	body, err := json.Marshal(&request)
+	if err != nil {
+		return "", err
+	}
+
+	reader := bytes.NewReader(body)
+
+	res, err := http.Post(url, "application/json", reader)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+
+	resBody, err := io.ReadAll(res.Body)
+	if err != nil {
+		return "", nil
+	}
+
+	var response struct {
+		Result string `json:"result"`
+	}
+
+	err = json.Unmarshal(resBody, &response)
+	if err != nil {
+		return "", nil
+	}
+
+	return response.Result, nil
 }

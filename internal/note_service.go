@@ -70,7 +70,15 @@ func (s *noteService) GetByTitle(title string) (Node, error) {
 		return Node{}, errors.New("Note note found")
 	}
 
-	return notes[found], nil
+	n := notes[found]
+	html, err := MDToHTML([]byte(n.Content))
+	if err != nil {
+		log.Printf("Error parsing MD to Html for note %s", n.Title)
+	} else {
+		n.Html = html
+	}
+
+	return n, nil
 }
 
 func filtersToMap(filters []Filter) map[string]string {

@@ -7,7 +7,9 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"sync"
 
+	"github.com/google/uuid"
 	"github.com/vninomtz/pkms/internal"
 	"github.com/vninomtz/pkms/internal/search"
 )
@@ -20,6 +22,14 @@ const (
 type templateHandler struct {
 	tmpl *template.Template
 }
+type SharedNote struct {
+	Content string
+}
+
+var (
+	shared = make(map[string]SharedNote)
+	mu     sync.Mutex
+)
 
 func (t *templateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	data := map[string]interface{}{
@@ -145,8 +155,46 @@ func FileServerRun() error {
 		}
 
 	})
+	http.HandleFunc("/api/share", HandleShare)
+	http.HandleFunc("/api/share/{uuid}", HandleShareDetail)
 	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("./assets"))))
 
 	log.Printf("Serving %s on HTTP port: %s\n", *directory, *port)
 	return http.ListenAndServe(":"+*port, nil)
+}
+
+func HandleShare(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Content string `json:"content"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil || req.Content == "" {
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return
+	}
+	id := uuid.New()
+	mu.Lock()
+	shared[id.String()] = SharedNote{Content: req.Content}
+	mu.Unlock()
+
+	json.NewEncoder(w).Encode(map[string]string{
+		"result": id.String(),
+	})
+}
+
+func HandleShareDetail(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	id := r.PathValue("uuid")
+	mu.Lock()
+	note, ok := shared[id]
+	mu.Unlock()
+
+	if !ok {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{
+		"result": note.Content,
+	})
 }
