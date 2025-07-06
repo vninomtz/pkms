@@ -25,6 +25,7 @@ const (
 const (
 	PKMS_STORE_PATH = "PKMS_STORE_PATH"
 	STORE_TYPE      = "PKMS_STORE_TYPE"
+	PKMS_SHARE_URL  = "PKMS_SHARE_URL"
 )
 
 func main() {
@@ -73,6 +74,8 @@ func main() {
 	// Share Command
 	cmdShare := flag.NewFlagSet("share", flag.ExitOnError)
 	findTitle = cmdShare.String("n", "", "Note title")
+	shareLimit := cmdShare.Int("limit", 1, "Limit of views allowed")
+	shareLink := cmdShare.String("link", "", "Link of note")
 
 	if len(os.Args) < 2 {
 		logger.Fatalln("Expected one subcommand")
@@ -145,22 +148,29 @@ func main() {
 			}
 		}
 	case "share":
+		share_url := os.Getenv(PKMS_SHARE_URL)
 		cmdShare.Parse(os.Args[2:])
-		n, err := srv.GetByTitle(*findTitle)
-		if err != nil {
-			log.Fatal(err)
+		if *findTitle != "" {
+			n, err := srv.GetByTitle(*findTitle)
+			if err != nil {
+				log.Fatal(err)
+			}
+			key := internal.RandomKey(16)
+			encrypted, err := internal.Encrypt([]byte(n.Html), []byte(key))
+			if err != nil {
+				log.Fatal(err)
+			}
+			res, err := ShareNote(share_url, encrypted, *shareLimit)
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Printf("%s/%s#%s", share_url, res, key)
+			return
 		}
-		fmt.Println(n.Html)
-		key := internal.RandomKey(16)
-		encrypted, err := internal.Encrypt([]byte(n.Html), []byte(key))
-		if err != nil {
-			log.Fatal(err)
+		if *shareLink != "" {
+			GetSharedNote(share_url, *shareLink)
+			return
 		}
-		res, err := ShareNote(encrypted)
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Printf("https://notas.vninomtz.xyz/notes/%s#%s", res, key)
 
 	default:
 		logger.Fatalln("Unknow subcommand")
@@ -215,13 +225,14 @@ func ExportNotes(notes []internal.Node) {
 	}
 }
 
-func ShareNote(content string) (string, error) {
-	url := "https://shareapi.vninomtz.xyz/share"
-
+func ShareNote(base_url, content string, limit int) (string, error) {
+	url := fmt.Sprint(base_url, "/share")
 	var request struct {
 		Content string `json:"Content"`
+		Limit   int    `json:"Limit"`
 	}
 	request.Content = content
+	request.Limit = limit
 
 	body, err := json.Marshal(&request)
 	if err != nil {
@@ -251,4 +262,33 @@ func ShareNote(content string) (string, error) {
 	}
 
 	return response.Result, nil
+}
+
+func GetSharedNote(base_url, id string) {
+	url := fmt.Sprintf("%s/notes/%s", base_url, id)
+	fmt.Println(url)
+
+	var response struct {
+		Result string `json:"Result"`
+	}
+	res, err := http.Get(url)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if res.StatusCode == http.StatusNotFound {
+		log.Printf("Note with id %s not found", id)
+		return
+	}
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(response.Result)
+
 }
