@@ -8,7 +8,7 @@ const SharedNote = () => {
   const location = useLocation();
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}/notes/${params.noteId}`)
+    fetch(`${import.meta.env.VITE_API_URL}/resources/${params.noteId}`)
       .then((res) => res.json())
       .then((r) => {
         Decrypt(r?.result, location.hash.slice(1)).then((r) => setContent(r));
