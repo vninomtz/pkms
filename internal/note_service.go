@@ -54,6 +54,32 @@ func (s *noteService) ListAllTags() (map[string]int, error) {
 	return tags, nil
 }
 
+func (s *noteService) GetBookmarks() ([]string, error) {
+	dic := make(map[string]int)
+	result := []string{}
+	notes, err := s.ListAll()
+	if err != nil {
+		return nil, err
+	}
+	for _, note := range notes {
+		links, err := note.Links()
+		if err != nil {
+			log.Printf("Error to extract links of Note %s\n", note.Title)
+			continue
+		}
+		for _, link := range links {
+			_, ok := dic[link]
+			if !ok {
+				dic[link] = 0
+				result = append(result, link)
+			}
+			dic[link]++
+
+		}
+	}
+	return result, nil
+}
+
 func (s *noteService) GetByTitle(title string) (Node, error) {
 	notes, err := s.ListAll()
 	if err != nil {
@@ -110,6 +136,20 @@ func (s *noteService) Find(_filters []Filter) ([]Node, error) {
 			} else {
 				note.Html = html
 			}
+			founds = append(founds, note)
+		}
+	}
+	return founds, nil
+}
+
+func (s *noteService) GetPublicNotes() ([]Node, error) {
+	notes, err := s.ListAll()
+	if err != nil {
+		return nil, err
+	}
+	var founds []Node
+	for _, note := range notes {
+		if note.Meta.IsPublic {
 			founds = append(founds, note)
 		}
 	}

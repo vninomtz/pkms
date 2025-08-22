@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/url"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -16,7 +17,9 @@ import (
 type NodeType string
 
 const (
-	TypeNote NodeType = "note"
+	TypeNote    NodeType = "note"
+	TypeQuote   NodeType = "quote"
+	TypeWriting NodeType = "writing"
 )
 
 const (
@@ -83,6 +86,38 @@ func (n *FileNode) Links() ([]string, error) {
 	return links, nil
 }
 
+func (n *Node) Links() ([]string, error) {
+	links := []string{}
+	scanner := bufio.NewScanner(bytes.NewBuffer(n.Bytes))
+	scanner.Split(bufio.ScanWords)
+	for scanner.Scan() {
+		word := scanner.Text()
+		if IsUrl(word) {
+			links = append(links, word)
+		} else {
+			re := regexp.MustCompile(`\((.*?)\)`)
+			matches := re.FindAllStringSubmatch(word, -1)
+			if len(matches) > 0 {
+				for _, m := range matches {
+					is := IsUrl(m[1])
+					if is {
+						links = append(links, m[1])
+					}
+				}
+			}
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return links, err
+	}
+	return links, nil
+}
+
+func IsUrl(str string) bool {
+	u, err := url.Parse(str)
+	return err == nil && u.Scheme != "" && u.Host != ""
+}
+
 type Filter struct {
 	Field string
 	Value string
@@ -93,7 +128,9 @@ type Meta struct {
 	Tags  any
 }
 type Metadata struct {
-	Tags []string `json:"tags"`
+	Tags     []string `json:"tags"`
+	Title    string
+	IsPublic bool
 }
 
 func NewNote(title, content string) (Node, error) {
@@ -121,12 +158,16 @@ func ExtractMetadata(raw []byte) ([]byte, Metadata, error) {
 	var metadata Metadata
 	var data map[string]interface{}
 	content, err := frontmatter.Parse(bytes.NewReader(raw), &data)
-	tags, ok := data["tags"]
 	if err != nil {
 		return content, metadata, err
 	}
+	tags, ok := data["tags"]
 	if !ok {
 		return content, metadata, nil
+	}
+	isPublic, ok := data["isPublic"]
+	if ok {
+		metadata.IsPublic = ToBool(isPublic)
 	}
 	switch v := tags.(type) {
 	case string:
@@ -144,33 +185,11 @@ func ExtractMetadata(raw []byte) ([]byte, Metadata, error) {
 
 	return content, metadata, nil
 }
-
-func GetYaml(str string) string {
-	res := ""
-	queue := []string{}
-	lines := strings.Split(str, "\n")
-	open := false
-	end := false
-	for _, line := range lines {
-		tmp := strings.TrimSpace(line)
-		if tmp == "---" {
-			queue = append(queue, tmp)
-			if !open {
-				open = true
-			} else {
-				end = true
-				break
-			}
-		} else if open {
-			queue = append(queue, line)
-		}
+func ToBool(v interface{}) bool {
+	if b, ok := v.(bool); ok {
+		return b
 	}
-
-	if end {
-		res = strings.Join(queue, "\n")
-	}
-
-	return res
+	return false
 }
 
 // Include tags check that all tags are included in the metadata
@@ -196,12 +215,15 @@ func tagsToSet(tags []string) map[string]bool {
 type NodeRepository interface {
 	Save(Node) error
 	GetNodes() ([]Node, error)
+	Restore() error
 }
 
 type NoteService interface {
 	New(title, content string) (Node, error)
 	ListAll() ([]Node, error)
+	GetPublicNotes() ([]Node, error)
 	ListAllTags() (map[string]int, error)
 	GetByTitle(title string) (Node, error)
 	Find([]Filter) ([]Node, error)
+	GetBookmarks() ([]string, error)
 }

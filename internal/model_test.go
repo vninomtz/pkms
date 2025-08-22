@@ -1,8 +1,6 @@
 package internal
 
 import (
-	"fmt"
-	"os"
 	"testing"
 )
 
@@ -15,34 +13,43 @@ date: "2018-02-14"
 output: html_document
 tags: tag1, tag2, tag3
 ---`
+
+	LinksExamples = `
+- [[pkms]]
+- [[project-bycuriosity]]
+- [Example test](https://example.com/test/test-long/)
+- [Example test](teste no link)
+
+https://example2.com/test2/test2-long/
+	`
 )
 
-func TestExtractMetadata(t *testing.T) {
-	expected := "tag1, tag2, tag3"
-	meta, err := ExtractMetadata(metadataSection)
-	if err != nil {
-		t.Errorf("No error expected get %s instead", err)
-	}
-	if meta.Tags != expected {
-		t.Errorf("Expected %s, get instead %s", meta.Tags, expected)
-	}
-}
-
-func TestGetYaml(t *testing.T) {
-	input, err := os.ReadFile(inputFile)
-	if err != nil {
-		t.Fatal(err)
+func TestGetLinks(t *testing.T) {
+	expLinks := 2
+	node := Node{
+		Bytes: []byte(LinksExamples),
 	}
 
-	yaml := GetYaml(string(input))
-	if yaml != metadataSection {
-		fmt.Println(yaml)
-		t.Errorf("Expected %s, get instead %s", metadataSection, yaml)
+	links, err := node.Links()
+	if err != nil {
+		t.Errorf("Unexpected error %v\n", err)
 	}
+
+	if expLinks != len(links) {
+		t.Errorf("Expected %d, get %d instead\n", expLinks, len(links))
+	}
+
+	for i, l := range links {
+		t.Logf("%d: %s\n", i, l)
+	}
+
 }
 
 func TestIncludeTags(t *testing.T) {
-	meta := Metadata{Title: "", Tags: "tag1, tag2"}
+	meta := Metadata{
+		Title: "",
+		Tags:  []string{"tag1", "tag2"},
+	}
 
 	if !meta.IncludeTags("tag1") {
 		t.Errorf("Expected %v, get %v instead", true, meta.IncludeTags("tag1"))

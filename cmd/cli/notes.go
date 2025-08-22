@@ -61,6 +61,8 @@ func main() {
 	// Ls command
 	cmdLs := flag.NewFlagSet("ls", flag.ExitOnError)
 	lsTags := cmdLs.Bool("t", false, "List all tags")
+	lsPublic := cmdLs.Bool("public", false, "List public notes")
+	lsMoveTo := cmdLs.String("cp", "", "Copy notes to")
 
 	// Get Command
 	cmdGet := flag.NewFlagSet("get", flag.ExitOnError)
@@ -70,12 +72,15 @@ func main() {
 	findTitle := cmdFind.String("n", "", "Note title")
 	findTags := cmdFind.String("t", "", "Note tags")
 	hasToExport := cmdFind.Bool("exp", false, "Export result")
+	moveTo := cmdFind.String("cp", "", "Copy notes to")
 
 	// Share Command
 	cmdShare := flag.NewFlagSet("share", flag.ExitOnError)
 	findTitle = cmdShare.String("n", "", "Note title")
 	shareLimit := cmdShare.Int("limit", 1, "Limit of views allowed")
 	shareLink := cmdShare.String("link", "", "Link of note")
+
+	cmdBM := flag.NewFlagSet("bookmark", flag.ExitOnError)
 
 	if len(os.Args) < 2 {
 		logger.Fatalln("Expected one subcommand")
@@ -121,12 +126,12 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		for i, n := range notes {
-			fmt.Printf("%d. %s\n", i+1, n.Title)
-		}
 		if *hasToExport {
-			ExportNotes(notes)
-
+			//ExportNotes(notes)
+			ExportToDB(notes)
+		}
+		if *moveTo != "" {
+			MoveNotes(notes, *moveTo)
 		}
 	case "ls":
 		cmdLs.Parse(os.Args[2:])
@@ -138,13 +143,26 @@ func main() {
 			for k, v := range tags {
 				fmt.Printf("- %s:%d\n", k, v)
 			}
+		} else if *lsPublic {
+			notes, err := srv.GetPublicNotes()
+			if err != nil {
+				logger.Fatalln(err)
+			}
+			if *lsMoveTo != "" {
+				MoveNotes(notes, *lsMoveTo)
+				return
+			}
+			for i, n := range notes {
+				fmt.Printf("%d %v     %s\n", i+1, n.Meta.IsPublic, n.Title)
+			}
+
 		} else {
 			notes, err := srv.ListAll()
 			if err != nil {
 				logger.Fatalln(err)
 			}
 			for i, n := range notes {
-				fmt.Printf("%d     %s\n", i+1, n.Title)
+				fmt.Printf("%d %v     %s\n", i+1, n.Meta.IsPublic, n.Title)
 			}
 		}
 	case "share":
@@ -171,6 +189,9 @@ func main() {
 			GetSharedNote(share_url, *shareLink)
 			return
 		}
+	case "bookmark":
+		BookmarkCommand(cmdBM, os.Args, srv)
+		return
 
 	default:
 		logger.Fatalln("Unknow subcommand")
@@ -290,5 +311,4 @@ func GetSharedNote(base_url, id string) {
 	}
 
 	fmt.Println(response.Result)
-
 }

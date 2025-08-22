@@ -27,6 +27,9 @@ func (r *fsRepo) buildName(filename string) string {
 	name := filename + r.ext
 	return filepath.Join(r.path, name)
 }
+func (r *fsRepo) Restore() error {
+	return nil
+}
 
 func (r *fsRepo) Save(node Node) error {
 	err := os.WriteFile(r.buildName(node.Title), []byte(node.Content), 0644)
@@ -50,12 +53,10 @@ func (r *fsRepo) GetNodes() ([]Node, error) {
 			raw, err := os.ReadFile(path)
 
 			var meta Metadata
-			// content, err := frontmatter.Parse(bytes.NewReader(raw), &meta)
 			content, meta, err := ExtractMetadata(raw)
 
 			if err != nil {
 				log.Printf("Error unmarshaling metadata of file %s: Error %s", path, err)
-				// return err
 				content = raw
 			}
 			noteName := strings.TrimSuffix(info.Name(), r.ext)

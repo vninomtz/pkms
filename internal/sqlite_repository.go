@@ -23,9 +23,9 @@ func NewSqliteNodeRepo(path string) NodeRepository {
 }
 
 func (r *sqliteNodeRepo) Save(node Node) error {
-	q := "INSERT INTO Nodes (Title, Description, NodeType) VALUES (?,?,?)"
+	q := "INSERT INTO Nodes (Title, Content, Html) VALUES (?,?,?)"
 
-	_, err := r.db.Exec(q, node.Title, node.Content, node.Type)
+	_, err := r.db.Exec(q, node.Title, node.Content, node.Html)
 
 	if err != nil {
 		log.Printf("Error saving node: %s", err)
@@ -56,4 +56,17 @@ func (r *sqliteNodeRepo) GetNodes() ([]Node, error) {
 		return nil, err
 	}
 	return nodes, nil
+}
+
+func (r *sqliteNodeRepo) Restore() error {
+	sql := `
+DROP TABLE IF EXISTS Nodes;
+
+CREATE TABLE Nodes(
+  Title TEXT NOT NULL PRIMARY KEY,
+  Content TEXT,
+  Html TEXT
+)`
+	_, err := r.db.Exec(sql)
+	return err
 }
