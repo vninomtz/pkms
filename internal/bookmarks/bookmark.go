@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -23,7 +22,7 @@ type Bookmark struct {
 
 func GetBookmarkFromUrl(url string) (Bookmark, error) {
 	client := &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout: 60 * time.Second,
 	}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -36,9 +35,6 @@ func GetBookmarkFromUrl(url string) (Bookmark, error) {
 	if err != nil {
 		return Bookmark{}, err
 	}
-	log.Printf("StatusCode: %s\n", resp.Status)
-	log.Printf("Header Content-Type: %s\n", resp.Header.Get("Content-Type"))
-	log.Printf("Host: %s", resp.Request.URL.Host)
 
 	if resp.StatusCode > 300 {
 		return Bookmark{}, errors.New(fmt.Sprintf("Error to fetch url: %s", resp.Status))
