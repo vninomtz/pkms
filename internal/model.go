@@ -131,6 +131,7 @@ type Metadata struct {
 	Tags     []string `json:"tags"`
 	Title    string
 	IsPublic bool
+	Type     string
 }
 
 func NewNote(title, content string) (Node, error) {
@@ -169,6 +170,11 @@ func ExtractMetadata(raw []byte) ([]byte, Metadata, error) {
 	if ok {
 		metadata.IsPublic = ToBool(isPublic)
 	}
+	noteType, ok := data["type"]
+	if ok {
+		metadata.Type = noteType.(string)
+	}
+
 	switch v := tags.(type) {
 	case string:
 		metadata.Tags = append(metadata.Tags, v)
@@ -210,12 +216,6 @@ func tagsToSet(tags []string) map[string]bool {
 		set[strings.TrimSpace(v)] = true
 	}
 	return set
-}
-
-type NodeRepository interface {
-	Save(Node) error
-	GetNodes() ([]Node, error)
-	Restore() error
 }
 
 type NoteService interface {

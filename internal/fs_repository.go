@@ -15,7 +15,7 @@ type fsRepo struct {
 	logger *log.Logger
 }
 
-func NewFsRepo(logger *log.Logger, dirRoot string) NodeRepository {
+func NewFsRepo(logger *log.Logger, dirRoot string) *fsRepo {
 	return &fsRepo{
 		path:   dirRoot,
 		ext:    ".md",

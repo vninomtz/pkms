@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"html/template"
 	"path/filepath"
+	"strings"
 
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
@@ -103,4 +104,23 @@ func ParseNodeToHTML(node FileNode, templateFile string) ([]byte, error) {
 	}
 
 	return bufferHtml.Bytes(), nil
+}
+
+func ParseDocument(doc Document) (Note, error) {
+	name := strings.TrimSuffix(doc.Name, doc.Ext)
+	content, meta, err := ExtractMetadata(doc.Content)
+	if err != nil {
+		return Note{}, err
+	}
+	n := Note{
+		Title:    name,
+		Content:  string(content),
+		IsPublic: meta.IsPublic,
+		Tags:     meta.Tags,
+		Type:     meta.Type,
+	}
+	if meta.Title != "" {
+		n.Title = meta.Title
+	}
+	return n, nil
 }
