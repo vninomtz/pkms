@@ -9,4 +9,5 @@ type Note struct {
 	CreatedAt time.Time
 	IsPublic  bool
 	Tags      []string
+	Links     []string
 }

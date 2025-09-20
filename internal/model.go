@@ -113,11 +113,6 @@ func (n *Node) Links() ([]string, error) {
 	return links, nil
 }
 
-func IsUrl(str string) bool {
-	u, err := url.Parse(str)
-	return err == nil && u.Scheme != "" && u.Host != ""
-}
-
 type Filter struct {
 	Field string
 	Value string

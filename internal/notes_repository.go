@@ -12,6 +12,7 @@ import (
 type NoteRepository interface {
 	Save(Note) error
 	All() ([]Note, error)
+	AllBookmarks() ([]string, error)
 }
 
 type notesRepo struct {
@@ -81,6 +82,16 @@ func (r *notesRepo) Save(nt Note) error {
 		nt.Type,
 	)
 
+	if len(nt.Links) > 0 {
+		for _, l := range nt.Links {
+			q = "INSERT INTO bookmarks(url, note_title) VALUES(?,?)"
+			_, err = r.db.Exec(q, l, nt.Title)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	if err != nil {
 		return err
 	}
@@ -120,4 +131,32 @@ func (r *notesRepo) All() ([]Note, error) {
 		return nil, err
 	}
 	return notes, nil
+}
+func (r *notesRepo) AllBookmarks() ([]string, error) {
+	err := r.Open()
+	if err != nil {
+		return nil, err
+	}
+	var links []string
+	rows, err := r.db.Query("SELECT DISTINCT url FROM bookmarks")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var l string
+		if err := rows.Scan(&l); err != nil {
+			return nil, err
+		}
+		links = append(links, l)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	err = r.Close()
+	if err != nil {
+		return nil, err
+	}
+	return links, nil
 }

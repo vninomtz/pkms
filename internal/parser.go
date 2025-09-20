@@ -1,9 +1,12 @@
 package internal
 
 import (
+	"bufio"
 	"bytes"
 	"html/template"
+	"net/url"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/yuin/goldmark"
@@ -112,15 +115,51 @@ func ParseDocument(doc Document) (Note, error) {
 	if err != nil {
 		return Note{}, err
 	}
+	links, err := ExtractLinks(doc.Content)
+	if err != nil {
+		return Note{}, err
+	}
 	n := Note{
 		Title:    name,
 		Content:  string(content),
 		IsPublic: meta.IsPublic,
 		Tags:     meta.Tags,
 		Type:     meta.Type,
+		Links:    links,
 	}
 	if meta.Title != "" {
 		n.Title = meta.Title
 	}
 	return n, nil
+}
+func ExtractLinks(content []byte) ([]string, error) {
+	links := []string{}
+	scanner := bufio.NewScanner(bytes.NewBuffer(content))
+	scanner.Split(bufio.ScanWords)
+	for scanner.Scan() {
+		word := scanner.Text()
+		if IsUrl(word) {
+			links = append(links, word)
+		} else {
+			re := regexp.MustCompile(`\((.*?)\)`)
+			matches := re.FindAllStringSubmatch(word, -1)
+			if len(matches) > 0 {
+				for _, m := range matches {
+					is := IsUrl(m[1])
+					if is {
+						links = append(links, m[1])
+					}
+				}
+			}
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return links, err
+	}
+	return links, nil
+}
+
+func IsUrl(str string) bool {
+	u, err := url.Parse(str)
+	return err == nil && u.Scheme != "" && u.Host != ""
 }

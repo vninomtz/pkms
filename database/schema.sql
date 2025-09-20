@@ -30,4 +30,10 @@ CREATE TABLE notes (
   type TEXT
 );
 
+DROP TABLE IF EXISTS bookmarks;
+
+CREATE TABLE bookmarks (
+  url TEXT,
+  note_title TEXT
+)
 
