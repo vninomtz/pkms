@@ -14,5 +14,4 @@ type Document struct {
 type DocumentRepository interface {
 	Save(Document) error
 	All() ([]Document, error)
-	Init() error
 }
