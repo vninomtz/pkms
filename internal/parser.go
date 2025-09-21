@@ -31,7 +31,7 @@ func NewTemplateParser(pathTmp, templateName string) *parser {
 	}
 }
 
-func (p *parser) Parse(node FileNode) ([]byte, error) {
+func (p *parser) Parse(node Document) ([]byte, error) {
 	html, err := p.MDToHTML(node.Content)
 	if err != nil {
 		return nil, err
@@ -110,7 +110,7 @@ func ParseNodeToHTML(node FileNode, templateFile string) ([]byte, error) {
 }
 
 func ParseDocument(doc Document) (Note, error) {
-	name := strings.TrimSuffix(doc.Name, doc.Ext)
+	name := strings.TrimSuffix(doc.Filename, doc.Ext)
 	content, meta, err := ExtractMetadata(doc.Content)
 	if err != nil {
 		return Note{}, err

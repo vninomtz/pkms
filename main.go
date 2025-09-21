@@ -22,6 +22,8 @@ func main() {
 		cmd.DocsCommand(args)
 	case "inspect":
 		cmd.InspectCommand(args)
+	case "install":
+		cmd.InstallCommand(args)
 	default:
 		fmt.Printf("Unknown command: %s\n", subcommand)
 		os.Exit(1)

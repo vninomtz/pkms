@@ -23,7 +23,7 @@ func (r *repository) Save(doc Document) error {
 	q := `INSERT INTO documents(name, bytes, size, path, ext, updated_at) VALUES (?,?,?,?,?,?)`
 
 	_, err := r.db.Exec(q,
-		doc.Name,
+		doc.Filename,
 		doc.Content,
 		doc.Size,
 		doc.Path,
@@ -48,7 +48,7 @@ func (r *repository) All() ([]Document, error) {
 		var n Document
 		var updated string
 		if err := rows.Scan(
-			&n.Name,
+			&n.Filename,
 			&n.Content,
 			&n.Size,
 			&n.Path,

@@ -38,7 +38,7 @@ func (l *Loader) Load() error {
 		b, err := os.ReadFile(path)
 
 		d := internal.Document{
-			Name:      info.Name(),
+			Filename:  info.Name(),
 			Path:      path,
 			Content:   b,
 			Size:      info.Size(),
@@ -59,4 +59,12 @@ func (l *Loader) AllowedExt(ext string) bool {
 		}
 	}
 	return false
+}
+func (l *Loader) FindByName(filename string) *internal.Document {
+	for _, n := range l.Documents {
+		if n.Name() == filename {
+			return &n
+		}
+	}
+	return nil
 }
