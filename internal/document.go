@@ -25,6 +25,13 @@ func (d Document) Print() {
 	fmt.Println(string(d.Content))
 }
 
+func NewTimeId() string {
+	t := time.Now()
+	date := strings.Join(strings.Split(t.Format(YYYYMMDD), "-"), "")
+	timeF := strings.Join(strings.Split(t.Format(HHMMSS24h), ":"), "")
+	return fmt.Sprintf("%s%s", date, timeF)
+}
+
 type DocumentRepository interface {
 	Save(Document) error
 	All() ([]Document, error)

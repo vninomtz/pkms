@@ -4,12 +4,10 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"fmt"
 	"net/url"
 	"path/filepath"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/adrg/frontmatter"
 )
@@ -141,13 +139,6 @@ func NewNote(title, content string) (Node, error) {
 		Content: content,
 		Type:    TypeNote,
 	}, nil
-}
-
-func NewTimeId() string {
-	t := time.Now()
-	date := strings.Join(strings.Split(t.Format(YYYYMMDD), "-"), "")
-	timeF := strings.Join(strings.Split(t.Format(HHMMSS24h), ":"), "")
-	return fmt.Sprintf("%s%s", date, timeF)
 }
 
 func ExtractMetadata(raw []byte) ([]byte, Metadata, error) {
