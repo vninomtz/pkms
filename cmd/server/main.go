@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/vninomtz/pkms/internal"
 	"github.com/vninomtz/pkms/internal/search"
+	"github.com/vninomtz/pkms/internal/store"
 )
 
 const (
@@ -51,13 +52,10 @@ func FileServerRun() error {
 	directory := flag.String("dir", "", "Directory to serve content")
 	flag.Parse()
 
-	collector := internal.NewCollector(*directory, "")
-	nodes, err := collector.Collect()
+	st, err := store.New(internal.DatabasePath())
 	if err != nil {
-		log.Println(err)
-		return err
+		log.Fatal(err)
 	}
-	searcher := internal.NewSearcher(nodes)
 
 	indexSearch := search.NewSercher(*directory)
 	err = indexSearch.Index()
@@ -83,7 +81,7 @@ func FileServerRun() error {
 			Items []map[string]string
 		}{
 			Title: "Writings | vic.aware",
-			Items: collector.ToMaps(),
+			Items: []map[string]string{},
 		}
 		if err := tmpl.ExecuteTemplate(w, "writings", content); err != nil {
 			log.Println(err)
@@ -92,7 +90,7 @@ func FileServerRun() error {
 	})
 	http.HandleFunc("/writings/{slug}", func(w http.ResponseWriter, r *http.Request) {
 		slug := r.PathValue("slug")
-		n, err := searcher.File(slug)
+		n, err := st.FindDocumetByName(slug)
 		if err != nil {
 			log.Printf("Error %v throw by File %s\n", err, slug)
 			w.Write([]byte("Not found"))
@@ -136,7 +134,7 @@ func FileServerRun() error {
 
 	})
 	http.HandleFunc("/api/bookmarks", func(w http.ResponseWriter, r *http.Request) {
-		result, err := searcher.GetBookmarks()
+		result, err := st.AllBookmarks()
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return

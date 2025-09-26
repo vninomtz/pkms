@@ -11,6 +11,8 @@ PRAGMA cache_size = 2000;
 PRAGMA busy_timeout = 5000;
 */
 
+PRAGMA foreign_keys = ON;
+
 DROP TABLE IF EXISTS documents;
 
 CREATE TABLE documents (
@@ -25,12 +27,14 @@ CREATE TABLE documents (
 
 DROP TABLE IF EXISTS notes;
 
-CREATE TABLE notes (
+CREATE TABLE parse_documents (
+  document_id INTEGER NOT NULL,
   title TEXT NOT NULL,
   content TEXT,
   is_public BIT,
   tags TEXT,
-  type TEXT
+  type TEXT,
+  FOREIGN KEY (document_id) REFERENCES documents(rowid) ON DELETE CASCADE
 );
 
 DROP TABLE IF EXISTS bookmarks;

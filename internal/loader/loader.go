@@ -5,14 +5,12 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-
-	"github.com/vninomtz/pkms/internal"
 )
 
 type Loader struct {
 	ext       []string
 	path      string
-	Documents []internal.Document
+	Documents []Document
 }
 
 func New(path string) *Loader {
@@ -22,7 +20,7 @@ func New(path string) *Loader {
 	}
 }
 func (l *Loader) Load() error {
-	docs := []internal.Document{}
+	docs := []Document{}
 	err := filepath.Walk(l.path, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return fmt.Errorf("error to access path %s: %w", err)
@@ -37,7 +35,7 @@ func (l *Loader) Load() error {
 
 		b, err := os.ReadFile(path)
 
-		d := internal.Document{
+		d := Document{
 			Filename:  info.Name(),
 			Path:      path,
 			Content:   b,
@@ -60,7 +58,7 @@ func (l *Loader) AllowedExt(ext string) bool {
 	}
 	return false
 }
-func (l *Loader) FindByName(filename string) *internal.Document {
+func (l *Loader) FindByName(filename string) *Document {
 	for _, n := range l.Documents {
 		if n.Name() == filename {
 			return &n

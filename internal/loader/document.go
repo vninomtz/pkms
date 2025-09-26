@@ -1,9 +1,16 @@
-package internal
+package loader
 
 import (
 	"fmt"
 	"strings"
 	"time"
+)
+
+const (
+	// YYYY-MM-DD: 2022-03-23
+	YYYYMMDD = "2006-01-02"
+	// 24h hh:mm:ss: 14:23:20
+	HHMMSS24h = "15:04:05"
 )
 
 type Document struct {
@@ -30,9 +37,4 @@ func NewTimeId() string {
 	date := strings.Join(strings.Split(t.Format(YYYYMMDD), "-"), "")
 	timeF := strings.Join(strings.Split(t.Format(HHMMSS24h), ":"), "")
 	return fmt.Sprintf("%s%s", date, timeF)
-}
-
-type DocumentRepository interface {
-	Save(Document) error
-	All() ([]Document, error)
 }
