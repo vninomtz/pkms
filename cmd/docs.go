@@ -22,6 +22,13 @@ func DocsCommand(args []string) {
 	index := fs.Bool("index", false, "Index documents loaded into a sqlite db")
 	fs.Parse(args)
 
+	if *path == "" {
+		*path = internal.NotesPath()
+	}
+	if *path == "" {
+		log.Fatalf("Notes directory no provided, set the %s env variable\n", internal.PKMS_NOTES_DIR)
+	}
+
 	if *add && *path != "" {
 		AddDocument(*path)
 		return
@@ -79,6 +86,7 @@ func AddDocument(dir string) {
 
 }
 func IndexDocuments(dir string) {
+	log.Printf("Indexing %s\n", dir)
 	loader := loader.New(dir)
 	err := loader.Load()
 	if err != nil {

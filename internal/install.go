@@ -10,6 +10,7 @@ import (
 
 const CLI_NAME = "pkms"
 const PKMS_HOME_DIR = "PKMS_HOME_DIR"
+const PKMS_NOTES_DIR = "PKMS_NOTES_DIR"
 const DB_FILENAME = "pkms.db"
 
 func Install() error {
@@ -48,6 +49,9 @@ func HomePath() string {
 
 func DatabasePath() string {
 	return filepath.Join(HomePath(), DB_FILENAME)
+}
+func NotesPath() string {
+	return os.Getenv(PKMS_NOTES_DIR)
 }
 
 func setup(dir string) error {
