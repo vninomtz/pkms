@@ -7,18 +7,19 @@ import (
 )
 
 type Note struct {
-	Title     string
-	Content   string
-	Type      string
-	CreatedAt time.Time
-	IsPublic  bool
-	Tags      []string
-	Links     []string
+	Title   string
+	Content string
+	Type    string
+	Created time.Time
+	Updated time.Time
+	Public  bool
+	Tags    []string
+	Links   []string
 }
 
 func (n Note) Print() {
 	fmt.Printf("Title: %s\n", n.Title)
-	fmt.Printf("IsPublic: %v\n", n.IsPublic)
+	fmt.Printf("IsPublic: %v\n", n.Public)
 	fmt.Printf("Type: %s\n", n.Type)
 	fmt.Printf("Tags: %s\n", strings.Join(n.Tags, ","))
 	fmt.Printf("Links: %d\n", len(n.Links))

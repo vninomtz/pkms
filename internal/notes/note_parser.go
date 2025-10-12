@@ -9,56 +9,18 @@ import (
 	"github.com/adrg/frontmatter"
 )
 
-func ParseMarkdown(content []byte) (Note, error) {
-	note := Note{}
-	var data map[string]interface{}
-	content, err := frontmatter.Parse(bytes.NewReader(content), &data)
+func Parse(content []byte) (Note, error) {
+	var note Note
+	res, err := frontmatter.Parse(bytes.NewReader(content), &note)
 	if err != nil {
 		return note, err
 	}
-	note.Content = string(content)
-
-	isPublic, ok := data["isPublic"]
-	if ok {
-		if b, ok := isPublic.(bool); ok {
-			note.IsPublic = b
-		} else {
-			note.IsPublic = false
-		}
-	}
-	noteType, ok := data["type"]
-	if ok {
-		note.Type = noteType.(string)
-	}
-	title, ok := data["title"]
-	if ok {
-		note.Title = title.(string)
-	}
-	note.Tags = parse_tags(data)
+	note.Content = string(res)
 	note.Links, err = parse_links(content)
 	if err != nil {
 		return note, err
 	}
 	return note, nil
-}
-func parse_tags(data map[string]interface{}) []string {
-	res := []string{}
-	tags, ok := data["tags"]
-	if !ok {
-		return res
-	}
-	switch v := tags.(type) {
-	case string:
-		res = append(res, v)
-	case []interface{}:
-		for _, item := range v {
-			str, ok := item.(string)
-			if ok {
-				res = append(res, str)
-			}
-		}
-	}
-	return res
 }
 func parse_links(content []byte) ([]string, error) {
 	links := []string{}

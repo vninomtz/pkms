@@ -1,11 +1,13 @@
 package cmd
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/vninomtz/pkms/internal"
 	"github.com/vninomtz/pkms/internal/loader"
@@ -15,11 +17,12 @@ import (
 
 func DocsCommand(args []string) {
 	fs := flag.NewFlagSet("docs", flag.ExitOnError)
-	add := fs.Bool("add", false, "Add new document (note)")
 	path := fs.String("path", "", "Documents from a path")
 	filename := fs.String("get", "", "Name of the document")
 	export := fs.Bool("export", false, "Export document")
 	index := fs.Bool("index", false, "Index documents loaded into a sqlite db")
+	public := fs.Bool("public", false, "Get public docs")
+	copyOutput := fs.String("copy", "", "Copy files readed from stdin to the output passed")
 	fs.Parse(args)
 
 	if *path == "" {
@@ -29,11 +32,6 @@ func DocsCommand(args []string) {
 		log.Fatalf("Notes directory no provided, set the %s env variable\n", internal.PKMS_NOTES_DIR)
 	}
 
-	if *add && *path != "" {
-		AddDocument(*path)
-		return
-	}
-
 	if *index && *path != "" {
 		IndexDocuments(*path)
 		return
@@ -41,6 +39,13 @@ func DocsCommand(args []string) {
 	if *filename != "" {
 		GetDocument(*filename, *export)
 		return
+	}
+	if *public {
+		GetPublicDocs(*path)
+		return
+	}
+	if *copyOutput != "" {
+		DocsCopyTo(*copyOutput)
 	}
 
 }
@@ -54,7 +59,7 @@ func GetDocument(filename string, export bool) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	note, err := notes.ParseMarkdown(doc.Content)
+	note, err := notes.Parse(doc.Content)
 	if note.Title == "" {
 		note.Title = doc.Name()
 	}
@@ -71,20 +76,52 @@ func GetDocument(filename string, export bool) {
 		internal.WriteHtml(doc.Name(), html)
 	}
 }
-
-func AddDocument(dir string) {
-	input, err := ReadInputFromEditor()
+func GetPublicDocs(dir string) {
+	loader := loader.New(dir)
+	err := loader.Load()
 	if err != nil {
 		log.Fatal(err)
 	}
-	filename := loader.NewTimeId()
-	path, err := internal.WriteNote(filename, input, dir)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Document created %s\n", path)
-
+	for _, d := range loader.Documents {
+		note, err := notes.Parse(d.Content)
+		if err != nil {
+			continue
+		}
+		if note.Public {
+			fmt.Println(d.Path)
+		}
+	}
 }
+func DocsCopyTo(output string) {
+	scanner := bufio.NewScanner(os.Stdin)
+
+	read := 0
+	copied := 0
+
+	for scanner.Scan() {
+		path := strings.TrimSpace(scanner.Text())
+		if path == "" {
+			continue
+		}
+		read++
+		cmd := exec.Command("cp", path, output)
+		_, err := cmd.Output()
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			copied++
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%d copied of %d readed\n", copied, read)
+}
+
 func IndexDocuments(dir string) {
 	log.Printf("Indexing %s\n", dir)
 	loader := loader.New(dir)
@@ -98,7 +135,7 @@ func IndexDocuments(dir string) {
 	}
 	success := 0
 	for _, doc := range loader.Documents {
-		note, err := notes.ParseMarkdown(doc.Content)
+		note, err := notes.Parse(doc.Content)
 		if note.Title == "" {
 			note.Title = doc.Name()
 		}
@@ -115,40 +152,4 @@ func IndexDocuments(dir string) {
 		success++
 	}
 	fmt.Printf("%d docs indexed of %d\n", success, len(loader.Documents))
-}
-func ReadInputFromEditor() ([]byte, error) {
-	file, err := os.CreateTemp(os.TempDir(), "pkms")
-	if err != nil {
-		return []byte{}, err
-	}
-	filename := file.Name()
-	defer os.Remove(filename)
-
-	if err = file.Close(); err != nil {
-		return []byte{}, err
-	}
-
-	if err = OpenFileInEditor(filename); err != nil {
-		return []byte{}, err
-	}
-
-	bytes, err := os.ReadFile(filename)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	return bytes, nil
-}
-
-func OpenFileInEditor(filename string) error {
-	editor := "vim"
-	path, err := exec.LookPath(editor)
-	if err != nil {
-		return err
-	}
-	cmd := exec.Command(path, filename)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
 }

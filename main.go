@@ -22,6 +22,8 @@ func main() {
 	switch subcommand {
 	case "docs":
 		cmd.DocsCommand(args)
+	case "add":
+		cmd.AddCommand(args)
 	case "inspect":
 		cmd.InspectCommand(args)
 	case "install":

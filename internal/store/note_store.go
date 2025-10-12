@@ -10,7 +10,7 @@ func (s *Store) SaveNote(note notes.Note, docId int64) (int64, error) {
 	q := `INSERT INTO parse_documents(document_id,title,content,is_public,tags,type) VALUES (?,?,?,?,?,?)`
 
 	isPublic := 0
-	if note.IsPublic {
+	if note.Public {
 		isPublic = 1
 	}
 	tags := ""
@@ -55,7 +55,7 @@ func (s *Store) All() ([]notes.Note, error) {
 	for rows.Next() {
 		var n notes.Note
 		var tags string
-		if err := rows.Scan(&n.Title, &n.Content, &n.IsPublic, &tags, &n.Type); err != nil {
+		if err := rows.Scan(&n.Title, &n.Content, &n.Public, &tags, &n.Type); err != nil {
 			return nil, err
 		}
 		n.Tags = strings.Split(tags, ",")
