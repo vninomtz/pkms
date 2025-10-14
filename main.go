@@ -24,6 +24,8 @@ func main() {
 		cmd.DocsCommand(args)
 	case "add":
 		cmd.AddCommand(args)
+	case "search":
+		cmd.SearchCommand(args)
 	case "inspect":
 		cmd.InspectCommand(args)
 	case "install":
