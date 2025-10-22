@@ -7,25 +7,24 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/vninomtz/pkms/internal"
-	"github.com/vninomtz/pkms/internal/loader"
+	"github.com/vninomtz/pkms/internal/config"
+	"github.com/vninomtz/pkms/internal/notes"
 )
 
 func AddCommand(args []string) {
 	fs := flag.NewFlagSet("add", flag.ExitOnError)
-
 	fs.Parse(args)
 
-	dir := internal.NotesPath()
-	if dir == "" {
-		log.Fatalf("Notes directory no provided, set the %s env variable\n", internal.PKMS_NOTES_DIR)
-	}
+	cfg := config.New()
+	cfg.Load()
+
+	srv := notes.New(cfg.NotesDir)
+
 	input, err := ReadInputFromEditor()
 	if err != nil {
 		log.Fatal(err)
 	}
-	filename := loader.NewTimeId()
-	path, err := internal.WriteNote(filename, input, dir)
+	path, err := srv.New(input)
 	if err != nil {
 		log.Fatal(err)
 	}

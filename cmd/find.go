@@ -15,7 +15,7 @@ import (
 	"github.com/vninomtz/pkms/internal/store"
 )
 
-func DocsCommand(args []string) {
+func FindCommand(args []string) {
 	fs := flag.NewFlagSet("docs", flag.ExitOnError)
 	path := fs.String("path", "", "Documents from a path")
 	filename := fs.String("get", "", "Name of the document")

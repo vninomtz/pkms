@@ -20,8 +20,8 @@ func main() {
 	args := os.Args[2:] // rest go to subcommand
 
 	switch subcommand {
-	case "docs":
-		cmd.DocsCommand(args)
+	case "find":
+		cmd.FindCommand(args)
 	case "add":
 		cmd.AddCommand(args)
 	case "search":

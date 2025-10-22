@@ -16,15 +16,24 @@ type: writing
 tags:
   - software-engineering
 ---
-Extra content`
+Extra content
+[[test_wikilink]]
+
+[[test2-wikilink]]
+`
 	exp_cre, _ := time.Parse("2006-01-02", "2025-06-29")
 	exp_upd, _ := time.Parse("2006-01-02", "2025-08-10")
 	exp := Note{
-		Title:   "Un arma contra los días solitarios",
-		Public:  true,
-		Type:    "writing",
-		Tags:    []string{"software-engineering"},
-		Content: "Extra content",
+		Title:  "Un arma contra los días solitarios",
+		Public: true,
+		Type:   "writing",
+		Tags:   []string{"software-engineering"},
+		Notes:  []string{"test_wikilink", "test2-wikilink"},
+		Content: `Extra content
+[[test_wikilink]]
+
+[[test2-wikilink]]
+`,
 		Created: exp_cre,
 		Updated: exp_upd,
 	}
@@ -53,5 +62,8 @@ Extra content`
 	}
 	if exp.Content != note.Content {
 		t.Errorf("Expected '%s', got '%s' instead", exp.Content, note.Content)
+	}
+	if !slices.Equal(note.Notes, exp.Notes) {
+		t.Errorf("Expected %s, got %s instead", exp.Notes, note.Notes)
 	}
 }

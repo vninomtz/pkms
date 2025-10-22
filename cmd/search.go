@@ -5,36 +5,28 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/vninomtz/pkms/internal"
-	"github.com/vninomtz/pkms/internal/loader"
+	"github.com/vninomtz/pkms/internal/config"
+	"github.com/vninomtz/pkms/internal/notes"
 )
 
 func SearchCommand(args []string) {
+	cfg := config.New()
+	cfg.Load()
+
 	fs := flag.NewFlagSet("search", flag.ExitOnError)
 	filename := fs.String("filename", "", "Search note by filename")
-
 	fs.Parse(args)
 
-	notes_dir := internal.NotesPath()
-	if notes_dir == "" {
-		log.Fatalf("Notes directory no provided, set the %s env variable\n", internal.PKMS_NOTES_DIR)
-	}
-	FindByFilename(notes_dir, *filename)
+	FindByFilename(cfg.NotesDir, *filename)
 }
 
 func FindByFilename(dir, filename string) {
-	load := loader.New(dir)
-	err := load.Load()
+	srv := notes.New(dir)
+
+	n, err := srv.GetFile(filename)
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println(n)
 
-	for _, doc := range load.Documents {
-		if doc.Name() == filename {
-			doc.Print()
-			return
-		}
-	}
-
-	fmt.Printf("Note with name %s not found \n", filename)
 }

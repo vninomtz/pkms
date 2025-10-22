@@ -20,8 +20,13 @@ func Parse(content []byte) (Note, error) {
 	if err != nil {
 		return note, err
 	}
+	note.Notes, err = parse_wikilinks(res)
+	if err != nil {
+		return note, err
+	}
 	return note, nil
 }
+
 func parse_links(content []byte) ([]string, error) {
 	links := []string{}
 	scanner := bufio.NewScanner(bytes.NewBuffer(content))
@@ -47,6 +52,26 @@ func parse_links(content []byte) ([]string, error) {
 		return links, err
 	}
 	return links, nil
+}
+func parse_wikilinks(content []byte) ([]string, error) {
+	links := []string{}
+	scanner := bufio.NewScanner(bytes.NewBuffer(content))
+	scanner.Split(bufio.ScanWords)
+	for scanner.Scan() {
+		word := scanner.Text()
+		re := regexp.MustCompile(`\[\[([^\]]+)\]\]`)
+		matches := re.FindAllStringSubmatch(word, -1)
+		if len(matches) > 0 {
+			for _, m := range matches {
+				links = append(links, m[1])
+			}
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return links, err
+	}
+	return links, nil
+
 }
 
 func IsUrl(str string) bool {
