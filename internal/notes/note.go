@@ -23,6 +23,7 @@ type Note struct {
 	Tags    []string
 	Links   []string
 	Notes   []string
+	Entry   Entry
 }
 
 type Entry struct {

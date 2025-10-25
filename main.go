@@ -7,7 +7,7 @@ import (
 	"github.com/vninomtz/pkms/cmd"
 )
 
-const PKM_VERSION = "0.0.1"
+const PKM_VERSION = "0.1.0"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -20,8 +20,6 @@ func main() {
 	args := os.Args[2:] // rest go to subcommand
 
 	switch subcommand {
-	case "find":
-		cmd.FindCommand(args)
 	case "add":
 		cmd.AddCommand(args)
 	case "search":
@@ -30,6 +28,10 @@ func main() {
 		cmd.InspectCommand(args)
 	case "install":
 		cmd.InstallCommand(args)
+	case "publish":
+		cmd.PublishCommand(args)
+	case "index":
+		cmd.IndexCommand(args)
 	case "version":
 		fmt.Printf("PKM version %s\n", PKM_VERSION)
 	default:

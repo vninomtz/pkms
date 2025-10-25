@@ -15,9 +15,15 @@ func SearchCommand(args []string) {
 
 	fs := flag.NewFlagSet("search", flag.ExitOnError)
 	filename := fs.String("filename", "", "Search note by filename")
+	public := fs.Bool("public", false, "Search public notes")
 	fs.Parse(args)
 
-	FindByFilename(cfg.NotesDir, *filename)
+	if *filename != "" {
+		FindByFilename(cfg.NotesDir, *filename)
+	}
+	if *public {
+		SearchPublic(cfg.NotesDir)
+	}
 }
 
 func FindByFilename(dir, filename string) {
@@ -28,5 +34,17 @@ func FindByFilename(dir, filename string) {
 		log.Fatal(err)
 	}
 	fmt.Println(n)
+}
 
+func SearchPublic(dir string) {
+	srv := notes.New(dir)
+
+	res, err := srv.GetPublic()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, n := range res {
+		fmt.Println(n.Entry.Path)
+	}
 }

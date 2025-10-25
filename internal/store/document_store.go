@@ -6,9 +6,10 @@ import (
 	"time"
 
 	"github.com/vninomtz/pkms/internal/loader"
+	"github.com/vninomtz/pkms/internal/notes"
 )
 
-func (s *Store) SaveDocument(doc loader.Document) (int64, error) {
+func (s *Store) SaveDocument(doc notes.Entry) (int64, error) {
 	q := `INSERT INTO documents(name, bytes, size, path, ext, updated_at) VALUES (?,?,?,?,?,?)`
 
 	res, err := s.DB().Exec(q,

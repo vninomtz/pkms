@@ -12,6 +12,8 @@ import (
 type NoteService interface {
 	New(content []byte) (string, error)
 	GetFile(filename string) (Note, error)
+	GetPublic() ([]Note, error)
+	GetAll() ([]Note, error)
 }
 
 type noteService struct {
@@ -51,6 +53,43 @@ func (n *noteService) GetFile(filename string) (Note, error) {
 	}
 
 	return Note{}, errors.New("File not found")
+}
+func (n *noteService) GetPublic() ([]Note, error) {
+	var notes []Note
+
+	entries, err := n.load()
+	if err != nil {
+		return notes, err
+	}
+	for _, d := range entries {
+		note, err := Parse(d.Content)
+		if err != nil {
+			continue
+		}
+		if note.Public {
+			note.Entry = d
+			notes = append(notes, note)
+		}
+	}
+	return notes, nil
+}
+
+func (n *noteService) GetAll() ([]Note, error) {
+	var notes []Note
+
+	entries, err := n.load()
+	if err != nil {
+		return notes, err
+	}
+	for _, d := range entries {
+		note, err := Parse(d.Content)
+		if err != nil {
+			continue
+		}
+		note.Entry = d
+		notes = append(notes, note)
+	}
+	return notes, nil
 }
 
 func (n *noteService) load() ([]Entry, error) {
