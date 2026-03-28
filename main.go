@@ -22,6 +22,8 @@ func main() {
 	switch subcommand {
 	case "add":
 		cmd.AddCommand(args)
+	case "add-book":
+		cmd.AddBookCommand(args)
 	case "search":
 		cmd.SearchCommand(args)
 	case "inspect":
