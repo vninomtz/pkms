@@ -34,6 +34,8 @@ func main() {
 		cmd.PublishCommand(args)
 	case "index":
 		cmd.IndexCommand(args)
+	case "sync":
+		cmd.SyncCommand(args)
 	case "version":
 		fmt.Printf("PKM version %s\n", PKM_VERSION)
 	default:

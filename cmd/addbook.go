@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/vninomtz/pkms/internal/config"
 	"github.com/vninomtz/pkms/internal/reading"
 )
 
@@ -15,7 +16,9 @@ func AddBookCommand(args []string) {
 	fs := flag.NewFlagSet("add-book", flag.ExitOnError)
 	fs.Parse(args)
 
-	filePath := getReadingResourcesPath()
+	cfg := config.New()
+	cfg.Load()
+	filePath := filepath.Join(cfg.NotesDir, "resources.yml")
 	srv := reading.New(filePath)
 
 	fmt.Println("\n📚 Agregar un nuevo libro a tus lecturas\n")
@@ -157,15 +160,3 @@ func statusToSpanish(status string) string {
 	return "Pendiente"
 }
 
-func getReadingResourcesPath() string {
-	home, _ := os.UserHomeDir()
-	return filepath.Join(
-		home,
-		"Library",
-		"Mobile Documents",
-		"iCloud~md~obsidian",
-		"Documents",
-		"notes",
-		"reading-resources.yml",
-	)
-}
