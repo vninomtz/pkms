@@ -18,8 +18,9 @@ echo "✅ Compilación exitosa."
 echo "🔑 Dando permisos de ejecución..."
 chmod +x $BIN_NAME
 
-echo "📦 Moviendo $BIN_NAME a $INSTALL_DIR (puede pedir contraseña)..."
-sudo mv $BIN_NAME $INSTALL_DIR/
+echo "📦 Copiando $BIN_NAME a $INSTALL_DIR (puede pedir contraseña)..."
+sudo cp $BIN_NAME $INSTALL_DIR/
+rm $BIN_NAME
 
 echo "🔍 Verificando instalación..."
 if command -v $BIN_NAME > /dev/null 2>&1; then
