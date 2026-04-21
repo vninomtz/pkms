@@ -9,13 +9,15 @@ import (
 const CLI_NAME = "pkms"
 const PKMS_HOME_DIR = "PKMS_HOME_DIR"
 const PKMS_NOTES_DIR = "PKMS_NOTES_DIR"
+const PKMS_BYCURIOSITY_DIR = "PKMS_BYCURIOSITY_DIR"
 const DB_FILENAME = "pkms.db"
 
 type config struct {
-	HomeDir    string
-	NotesDir   string
-	SQLiteFile string
-	CLIDir     string
+	HomeDir        string
+	NotesDir       string
+	SQLiteFile     string
+	CLIDir         string
+	BycuriosityDir string
 }
 
 func New() *config {
@@ -23,7 +25,6 @@ func New() *config {
 }
 
 func (c *config) Load() {
-
 	home, err := os.UserHomeDir()
 	if err != nil {
 		panic("Error to get $HOME directory")
@@ -33,6 +34,7 @@ func (c *config) Load() {
 	c.SQLiteFile = filepath.Join(c.CLIDir, DB_FILENAME)
 	c.NotesDir = os.Getenv(PKMS_NOTES_DIR)
 	if c.NotesDir == "" {
-		panic("Error to get $PKMS_HOME_DIR env variable")
+		panic("Error to get $PKMS_NOTES_DIR env variable")
 	}
+	c.BycuriosityDir = os.Getenv(PKMS_BYCURIOSITY_DIR)
 }

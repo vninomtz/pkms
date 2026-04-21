@@ -22,6 +22,8 @@ func main() {
 	switch subcommand {
 	case "add":
 		cmd.AddCommand(args)
+	case "add-book":
+		cmd.AddBookCommand(args)
 	case "search":
 		cmd.SearchCommand(args)
 	case "inspect":
@@ -32,6 +34,8 @@ func main() {
 		cmd.PublishCommand(args)
 	case "index":
 		cmd.IndexCommand(args)
+	case "sync":
+		cmd.SyncCommand(args)
 	case "version":
 		fmt.Printf("PKM version %s\n", PKM_VERSION)
 	default:
