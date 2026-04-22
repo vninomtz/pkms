@@ -70,6 +70,15 @@ func SyncCommand(args []string) {
 	// Sync Notes
 	fmt.Println("\nNotes:")
 	srv := notes.New(cfg.NotesDir)
+
+	// Get public notes count for preview
+	publicNotes, err := srv.GetPublic()
+	if err != nil {
+		fmt.Printf("  error loading notes: %v\n", err)
+	} else {
+		fmt.Printf("  Found %d public notes to sync\n", len(publicNotes))
+	}
+
 	notesStats, err := syncNotes(srv, filepath.Join(cfg.BycuriosityDir, "notes"), *dryRun)
 	if err != nil {
 		fmt.Printf("  error syncing notes: %v\n", err)
@@ -82,8 +91,12 @@ func SyncCommand(args []string) {
 	fmt.Printf("YAML: %d/%d files synced\n", syncedYAML, len(syncFiles))
 
 	totalNoteChanges := notesStats.Added + notesStats.Updated
-	fmt.Printf("Notes: %d copied (%d new, %d updated), %d deleted\n",
-		totalNoteChanges, notesStats.Added, notesStats.Updated, notesStats.Deleted)
+	if notesStats.Deleted == 0 {
+		fmt.Printf("Notes: %d public notes synced to ByCuriosity\n", totalNoteChanges)
+	} else {
+		fmt.Printf("Notes synced: %d to add/update, %d to delete (made private or removed)\n",
+			totalNoteChanges, notesStats.Deleted)
+	}
 	fmt.Printf("Total time: %.2fs\n", duration)
 
 	if *dryRun {
