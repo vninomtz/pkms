@@ -11,11 +11,11 @@ import (
 	"github.com/vninomtz/pkms/internal/config"
 )
 
-var syncFiles = []string{
-	"exercises.yml",
-	"routines.yml",
-	"schedule.yml",
-	"resources.yml",
+var syncFiles = map[string]string{
+	"exercises.yml": "exercises/exercises.yml",
+	"routines.yml":  "routines/routines.yml",
+	"schedule.yml":  "schedule/schedule.yml",
+	"resources.yml": "resources/resources.yml",
 }
 
 func SyncCommand(args []string) {
@@ -35,9 +35,9 @@ func SyncCommand(args []string) {
 	fmt.Printf("  Target : %s\n\n", cfg.BycuriosityDir)
 
 	synced := 0
-	for _, file := range syncFiles {
+	for file, subpath := range syncFiles {
 		src := filepath.Join(cfg.NotesDir, file)
-		dst := filepath.Join(cfg.BycuriosityDir, file)
+		dst := filepath.Join(cfg.BycuriosityDir, subpath)
 
 		if _, err := os.Stat(src); os.IsNotExist(err) {
 			fmt.Printf("  skip  %s (not found in notes)\n", file)
