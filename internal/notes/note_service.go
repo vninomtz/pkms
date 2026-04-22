@@ -100,6 +100,10 @@ func (n *noteService) load() ([]Entry, error) {
 		}
 
 		if info.IsDir() {
+			// Skip .claude and .git directories
+			if info.Name() == ".claude" || info.Name() == ".git" {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 		if filepath.Ext(path) != ".md" {

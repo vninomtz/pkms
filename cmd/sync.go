@@ -79,13 +79,17 @@ func SyncCommand(args []string) {
 	// Summary
 	duration := time.Since(startTime).Seconds()
 	fmt.Printf("\n=== Summary ===\n")
-	fmt.Printf("YAML: %d/%d synced\n", syncedYAML, len(syncFiles))
-	fmt.Printf("Notes: %d synced, %d updated, %d deleted\n",
-		notesStats.Added, notesStats.Updated, notesStats.Deleted)
-	fmt.Printf("Total: %.2fs\n", duration)
+	fmt.Printf("YAML: %d/%d files synced\n", syncedYAML, len(syncFiles))
+
+	totalNoteChanges := notesStats.Added + notesStats.Updated
+	fmt.Printf("Notes: %d copied (%d new, %d updated), %d deleted\n",
+		totalNoteChanges, notesStats.Added, notesStats.Updated, notesStats.Deleted)
+	fmt.Printf("Total time: %.2fs\n", duration)
 
 	if *dryRun {
-		fmt.Println("\n(dry-run mode, no files written)")
+		fmt.Printf("\n📋 Dry-run mode — no files were written\n")
+	} else {
+		fmt.Printf("\n✓ Sync complete\n")
 	}
 }
 
