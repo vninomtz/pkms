@@ -7,8 +7,12 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
+	"time"
 
 	"github.com/vninomtz/pkms/internal/config"
+	"github.com/vninomtz/pkms/internal/notes"
 )
 
 var syncFiles = map[string]string{
@@ -19,6 +23,8 @@ var syncFiles = map[string]string{
 }
 
 func SyncCommand(args []string) {
+	startTime := time.Now()
+
 	fs := flag.NewFlagSet("sync", flag.ExitOnError)
 	dryRun := fs.Bool("dry-run", false, "Preview changes without writing files")
 	fs.Parse(args)
@@ -30,11 +36,13 @@ func SyncCommand(args []string) {
 		log.Fatal("PKMS_BYCURIOSITY_DIR is not set. Example:\n  export PKMS_BYCURIOSITY_DIR=/path/to/bycuriosity/website/src/content")
 	}
 
-	fmt.Printf("Syncing notes → bycuriosity\n")
+	fmt.Printf("Syncing content → bycuriosity\n")
 	fmt.Printf("  Source : %s\n", cfg.NotesDir)
 	fmt.Printf("  Target : %s\n\n", cfg.BycuriosityDir)
 
-	synced := 0
+	// Sync YAML files
+	fmt.Println("YAML Files:")
+	syncedYAML := 0
 	for file, subpath := range syncFiles {
 		src := filepath.Join(cfg.NotesDir, file)
 		dst := filepath.Join(cfg.BycuriosityDir, subpath)
@@ -46,7 +54,7 @@ func SyncCommand(args []string) {
 
 		if *dryRun {
 			fmt.Printf("  would copy  %s → %s\n", src, dst)
-			synced++
+			syncedYAML++
 			continue
 		}
 
@@ -56,14 +64,29 @@ func SyncCommand(args []string) {
 		}
 
 		fmt.Printf("  copied  %s\n", file)
-		synced++
+		syncedYAML++
 	}
 
-	fmt.Printf("\n%d/%d files synced", synced, len(syncFiles))
-	if *dryRun {
-		fmt.Print(" (dry-run, no files written)")
+	// Sync Notes
+	fmt.Println("\nNotes:")
+	srv := notes.New(cfg.NotesDir)
+	notesStats, err := syncNotes(srv, filepath.Join(cfg.BycuriosityDir, "notes"), *dryRun)
+	if err != nil {
+		fmt.Printf("  error syncing notes: %v\n", err)
+		notesStats = SyncStats{}
 	}
-	fmt.Println()
+
+	// Summary
+	duration := time.Since(startTime).Seconds()
+	fmt.Printf("\n=== Summary ===\n")
+	fmt.Printf("YAML: %d/%d synced\n", syncedYAML, len(syncFiles))
+	fmt.Printf("Notes: %d synced, %d updated, %d deleted\n",
+		notesStats.Added, notesStats.Updated, notesStats.Deleted)
+	fmt.Printf("Total: %.2fs\n", duration)
+
+	if *dryRun {
+		fmt.Println("\n(dry-run mode, no files written)")
+	}
 }
 
 func copyFile(src, dst string) error {
@@ -88,4 +111,144 @@ func copyFile(src, dst string) error {
 	}
 
 	return out.Sync()
+}
+
+// SyncStats tracks the results of syncing notes
+type SyncStats struct {
+	Added   int
+	Updated int
+	Deleted int
+}
+
+// slugify converts a title to a URL-safe filename
+func slugify(title string) string {
+	// Convert to lowercase
+	s := strings.ToLower(title)
+	// Replace spaces with hyphens
+	s = strings.ReplaceAll(s, " ", "-")
+	// Remove special characters, keep only alphanumeric and hyphens
+	reg := regexp.MustCompile("[^a-z0-9-]+")
+	s = reg.ReplaceAllString(s, "")
+	// Replace multiple hyphens with single hyphen
+	s = regexp.MustCompile("-+").ReplaceAllString(s, "-")
+	// Trim hyphens from edges
+	s = strings.Trim(s, "-")
+	return s
+}
+
+// getOutputFilename determines the output filename for a note
+func getOutputFilename(note notes.Note) string {
+	if note.Title != "" {
+		return slugify(note.Title) + ".md"
+	}
+	return note.Entry.Filename
+}
+
+// listNotesInDirectory returns all markdown files in a directory
+func listNotesInDirectory(dir string) (map[string]bool, error) {
+	files := make(map[string]bool)
+
+	// Create directory if it doesn't exist
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		return files, nil
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return files, err
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".md") {
+			files[entry.Name()] = true
+		}
+	}
+
+	return files, nil
+}
+
+// syncNotes synchronizes public notes from PKMS to ByCuriosity
+func syncNotes(srv notes.NoteService, targetDir string, dryRun bool) (SyncStats, error) {
+	stats := SyncStats{}
+
+	// Create target directory if it doesn't exist
+	if !dryRun {
+		if err := os.MkdirAll(targetDir, 0755); err != nil {
+			return stats, fmt.Errorf("create target dir: %w", err)
+		}
+	}
+
+	// Get all public notes
+	publicNotes, err := srv.GetPublic()
+	if err != nil {
+		return stats, err
+	}
+
+	// Track which files we're syncing
+	syncedFiles := make(map[string]bool)
+
+	// Sync each public note
+	for _, note := range publicNotes {
+		outputFilename := getOutputFilename(note)
+		outputPath := filepath.Join(targetDir, outputFilename)
+
+		// Check if file already exists (for update detection)
+		_, exists := os.Stat(outputPath)
+		isNew := os.IsNotExist(exists)
+
+		syncedFiles[outputFilename] = true
+
+		if dryRun {
+			if isNew {
+				fmt.Printf("  would add    %s\n", outputFilename)
+				stats.Added++
+			} else {
+				fmt.Printf("  would update %s\n", outputFilename)
+				stats.Updated++
+			}
+			continue
+		}
+
+		// Write note file with preserved frontmatter
+		if err := os.WriteFile(outputPath, note.Entry.Content, 0644); err != nil {
+			fmt.Printf("  error writing %s: %v\n", outputFilename, err)
+			continue
+		}
+
+		if isNew {
+			fmt.Printf("  added    %s\n", outputFilename)
+			stats.Added++
+		} else {
+			fmt.Printf("  updated  %s\n", outputFilename)
+			stats.Updated++
+		}
+	}
+
+	// Find and delete files that are no longer public
+	existingFiles, err := listNotesInDirectory(targetDir)
+	if err != nil {
+		return stats, err
+	}
+
+	for filename := range existingFiles {
+		if !syncedFiles[filename] {
+			filePath := filepath.Join(targetDir, filename)
+
+			if dryRun {
+				fmt.Printf("  would delete %s\n", filename)
+				stats.Deleted++
+				continue
+			}
+
+			if err := os.Remove(filePath); err != nil {
+				fmt.Printf("  error deleting %s: %v\n", filename, err)
+				continue
+			}
+
+			fmt.Printf("  deleted  %s\n", filename)
+			stats.Deleted++
+		}
+	}
+
+	return stats, nil
 }
