@@ -11,15 +11,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/vninomtz/pkms/internal/bookmarks"
 	"github.com/vninomtz/pkms/internal/config"
+	"github.com/vninomtz/pkms/internal/crawler"
 	"github.com/vninomtz/pkms/internal/notes"
 )
 
 var syncFiles = map[string]string{
-	"exercises.yml": "exercises/exercises.yml",
-	"routines.yml":  "routines/routines.yml",
-	"schedule.yml":  "schedule/schedule.yml",
-	"resources.yml": "resources/resources.yml",
+	"exercises.yml":  "exercises/exercises.yml",
+	"routines.yml":   "routines/routines.yml",
+	"schedule.yml":   "schedule/schedule.yml",
+	"resources.yml":  "resources/resources.yml",
+	"bookmarks.yml":  "bookmarks/bookmarks.yml",
 }
 
 func SyncCommand(args []string) {
@@ -85,6 +88,14 @@ func SyncCommand(args []string) {
 		notesStats = SyncStats{}
 	}
 
+	// Sync Bookmarks
+	fmt.Println("\nBookmarks:")
+	bookmarkStats, err := syncBookmarks(srv, filepath.Join(cfg.NotesDir, "bookmarks.yml"), *dryRun)
+	if err != nil {
+		fmt.Printf("  error syncing bookmarks: %v\n", err)
+		bookmarkStats = bookmarks.BookmarkStats{}
+	}
+
 	// Summary
 	duration := time.Since(startTime).Seconds()
 	fmt.Printf("\n=== Summary ===\n")
@@ -97,6 +108,16 @@ func SyncCommand(args []string) {
 		fmt.Printf("Notes synced: %d to add/update, %d to delete (made private or removed)\n",
 			totalNoteChanges, notesStats.Deleted)
 	}
+
+	if bookmarkStats.Discovered > 0 {
+		fmt.Printf("Bookmarks: %d discovered, %d fetched (new), %d cached (reused), %d updated (refreshed)",
+			bookmarkStats.Discovered, bookmarkStats.Fetched, bookmarkStats.Cached, bookmarkStats.Updated)
+		if bookmarkStats.Failed > 0 {
+			fmt.Printf(", %d failed", bookmarkStats.Failed)
+		}
+		fmt.Println()
+	}
+
 	fmt.Printf("Total time: %.2fs\n", duration)
 
 	if *dryRun {
@@ -265,6 +286,126 @@ func syncNotes(srv notes.NoteService, targetDir string, dryRun bool) (SyncStats,
 			fmt.Printf("  deleted  %s\n", filename)
 			stats.Deleted++
 		}
+	}
+
+	return stats, nil
+}
+
+// extractUniqueURLs collects all unique URLs from all notes
+func extractUniqueURLs(srv notes.NoteService) (map[string]bool, error) {
+	urls := make(map[string]bool)
+
+	allNotes, err := srv.GetAll()
+	if err != nil {
+		return urls, err
+	}
+
+	for _, note := range allNotes {
+		for _, url := range note.Links {
+			urls[url] = true
+		}
+	}
+
+	return urls, nil
+}
+
+// syncBookmarks discovers and syncs bookmarks from notes
+func syncBookmarks(srv notes.NoteService, bookmarksPath string, dryRun bool) (bookmarks.BookmarkStats, error) {
+	stats := bookmarks.BookmarkStats{}
+
+	// Extract all unique URLs from notes
+	discoveredURLs, err := extractUniqueURLs(srv)
+	if err != nil {
+		return stats, fmt.Errorf("error extracting URLs: %w", err)
+	}
+
+	stats.Discovered = len(discoveredURLs)
+	if stats.Discovered == 0 {
+		fmt.Println("  no URLs found in notes")
+		return stats, nil
+	}
+
+	fmt.Printf("  found %d unique URLs in notes\n", stats.Discovered)
+
+	// Load existing bookmarks
+	bookmarksSrv := bookmarks.New(bookmarksPath)
+	bookmarkList, err := bookmarksSrv.LoadBookmarks()
+	if err != nil {
+		return stats, fmt.Errorf("error loading bookmarks: %w", err)
+	}
+
+	// Build map of existing bookmarks by URL
+	existingByURL := make(map[string]*bookmarks.Bookmark)
+	for i, b := range bookmarkList.Bookmarks {
+		existingByURL[b.URL] = &bookmarkList.Bookmarks[i]
+	}
+
+	// Categorize URLs: new, cached, need refresh
+	var toFetch []string
+	newBookmarks := []*bookmarks.Bookmark{}
+
+	for url := range discoveredURLs {
+		if existing, found := existingByURL[url]; found {
+			if bookmarksSrv.IsCached(existing) {
+				stats.Cached++
+			} else {
+				stats.Updated++
+				toFetch = append(toFetch, url)
+			}
+		} else {
+			stats.Fetched++
+			toFetch = append(toFetch, url)
+			newBookmarks = append(newBookmarks, &bookmarks.Bookmark{URL: url})
+		}
+	}
+
+	if dryRun {
+		fmt.Printf("  would fetch %d new/stale URLs, reuse %d cached\n", len(toFetch), stats.Cached)
+		fmt.Printf("  would save bookmarks.yml\n")
+		return stats, nil
+	}
+
+	// Fetch metadata for new and stale URLs
+	if len(toFetch) > 0 {
+		fmt.Printf("  fetching metadata for %d URLs...\n", len(toFetch))
+		pages, err := crawler.FetchMultiple(toFetch)
+		if err != nil {
+			return stats, fmt.Errorf("error fetching URLs: %w", err)
+		}
+
+		// Process fetched pages
+		for _, page := range pages {
+			metadata, err := crawler.ParseHtml(page.HTML)
+			if err != nil {
+				fmt.Printf("    error parsing %s: %v\n", page.URL, err)
+				stats.Failed++
+				continue
+			}
+
+			// Find and update bookmark
+			if existing, found := existingByURL[page.URL]; found {
+				bookmarksSrv.UpdateMetadata(existing, metadata)
+			} else {
+				// New bookmark
+				newBookmark := bookmarksSrv.AddBookmark(page.URL, metadata)
+				bookmarkList.Bookmarks = append(bookmarkList.Bookmarks, *newBookmark)
+				existingByURL[page.URL] = newBookmark
+			}
+		}
+	}
+
+	// Remove bookmarks for URLs no longer in notes
+	var updatedBookmarks []bookmarks.Bookmark
+	for _, b := range bookmarkList.Bookmarks {
+		if discoveredURLs[b.URL] {
+			updatedBookmarks = append(updatedBookmarks, b)
+		}
+	}
+	bookmarkList.Bookmarks = updatedBookmarks
+
+	// Save bookmarks
+	if err := bookmarksSrv.SaveBookmarks(bookmarkList); err != nil {
+		return stats, fmt.Errorf("error saving bookmarks: %w", err)
 	}
 
 	return stats, nil
