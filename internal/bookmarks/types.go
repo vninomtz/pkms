@@ -7,8 +7,10 @@ type Bookmark struct {
 	Description string   `yaml:"description"`
 	Image       string   `yaml:"image,omitempty"`
 	Tags        []string `yaml:"tags,omitempty"`
-	SavedDate   string   `yaml:"saved_date"`    // When discovered in notes
-	LastScraped string   `yaml:"last_scraped"`  // When metadata was fetched (RFC3339)
+	SavedDate   string   `yaml:"saved_date"`
+	LastScraped string   `yaml:"last_scraped"`
+	Status      string   `yaml:"status"`        // "ok" | "failed"
+	FetchError  string   `yaml:"fetch_error,omitempty"`
 }
 
 type BookmarkMetadata struct {
