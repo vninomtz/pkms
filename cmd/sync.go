@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"net/url"
+
 	"github.com/vninomtz/pkms/internal/bookmarks"
 	"github.com/vninomtz/pkms/internal/config"
 	"github.com/vninomtz/pkms/internal/crawler"
@@ -291,7 +293,41 @@ func syncNotes(srv notes.NoteService, targetDir string, dryRun bool) (SyncStats,
 	return stats, nil
 }
 
-// extractUniqueURLs collects all unique URLs from all notes
+// skipDomains is a list of domains that require auth or block scrapers
+var skipDomains = []string{
+	"claude.ai",
+	"chat.openai.com",
+	"chatgpt.com",
+	"twitter.com",
+	"x.com",
+	"linkedin.com",
+	"facebook.com",
+	"instagram.com",
+	"notion.so",
+	"figma.com",
+	"docs.google.com",
+	"drive.google.com",
+	"mail.google.com",
+	"localhost",
+	"127.0.0.1",
+}
+
+// isSkippedDomain returns true if the URL's domain should be skipped
+func isSkippedDomain(rawURL string) bool {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return false
+	}
+	host := strings.ToLower(strings.TrimPrefix(u.Hostname(), "www."))
+	for _, skip := range skipDomains {
+		if host == skip || strings.HasSuffix(host, "."+skip) {
+			return true
+		}
+	}
+	return false
+}
+
+// extractUniqueURLs collects all unique URLs from all notes, excluding skipped domains
 func extractUniqueURLs(srv notes.NoteService) (map[string]bool, error) {
 	urls := make(map[string]bool)
 
@@ -301,8 +337,10 @@ func extractUniqueURLs(srv notes.NoteService) (map[string]bool, error) {
 	}
 
 	for _, note := range allNotes {
-		for _, url := range note.Links {
-			urls[url] = true
+		for _, u := range note.Links {
+			if !isSkippedDomain(u) {
+				urls[u] = true
+			}
 		}
 	}
 
