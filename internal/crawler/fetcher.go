@@ -11,7 +11,7 @@ import (
 
 func Fetch(url string) (*Page, error) {
 	client := &http.Client{
-		Timeout: 60 * time.Second,
+		Timeout: 90 * time.Second,
 	}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
