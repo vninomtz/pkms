@@ -44,6 +44,15 @@ func (s *Service) LoadBookmarks() (*BookmarkList, error) {
 		return nil, fmt.Errorf("error parsing YAML: %w", err)
 	}
 
+	// Migrate legacy bookmarks that predate the status field
+	for i := range bookmarks.Bookmarks {
+		if bookmarks.Bookmarks[i].Status == "" {
+			if bookmarks.Bookmarks[i].LastScraped != "" {
+				bookmarks.Bookmarks[i].Status = "ok"
+			}
+		}
+	}
+
 	return &bookmarks, nil
 }
 
@@ -109,6 +118,25 @@ func (s *Service) UpdateMetadata(bookmark *Bookmark, metadata map[string]string)
 	}
 
 	bookmark.LastScraped = time.Now().Format(time.RFC3339)
+	bookmark.Status = "ok"
+	bookmark.FetchError = ""
+}
+
+func (s *Service) MarkFailed(bookmark *Bookmark, errMsg string) {
+	bookmark.LastScraped = time.Now().Format(time.RFC3339)
+	bookmark.Status = "failed"
+	bookmark.FetchError = sanitizeString(errMsg)
+}
+
+func (s *Service) AddFailedBookmark(rawURL string, errMsg string) *Bookmark {
+	return &Bookmark{
+		ID:          generateID(),
+		URL:         rawURL,
+		SavedDate:   time.Now().Format("2006-01-02"),
+		LastScraped: time.Now().Format(time.RFC3339),
+		Status:      "failed",
+		FetchError:  sanitizeString(errMsg),
+	}
 }
 
 // sanitizeString removes problematic characters that break YAML parsing
@@ -127,10 +155,10 @@ func sanitizeString(s string) string {
 	return s
 }
 
-func (s *Service) AddBookmark(url string, metadata map[string]string) *Bookmark {
+func (s *Service) AddBookmark(rawURL string, metadata map[string]string) *Bookmark {
 	bookmark := &Bookmark{
 		ID:        generateID(),
-		URL:       url,
+		URL:       rawURL,
 		SavedDate: time.Now().Format("2006-01-02"),
 	}
 

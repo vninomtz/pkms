@@ -406,29 +406,54 @@ func syncBookmarks(srv notes.NoteService, bookmarksPath string, dryRun bool) (bo
 	// Fetch metadata for new and stale URLs
 	if len(toFetch) > 0 {
 		fmt.Printf("  fetching metadata for %d URLs...\n", len(toFetch))
-		pages, err := crawler.FetchMultiple(toFetch)
-		if err != nil {
-			return stats, fmt.Errorf("error fetching URLs: %w", err)
+		pages, fetchErr := crawler.FetchMultiple(toFetch)
+		if fetchErr != nil {
+			return stats, fmt.Errorf("error fetching URLs: %w", fetchErr)
 		}
+
+		// Track which URLs were successfully fetched
+		fetchedURLs := make(map[string]bool)
 
 		// Process fetched pages
 		for _, page := range pages {
+			fetchedURLs[page.URL] = true
+
 			metadata, err := crawler.ParseHtml(page.HTML)
 			if err != nil {
-				fmt.Printf("    error parsing %s: %v\n", page.URL, err)
+				// Fetch succeeded but parse failed — mark as failed
+				if existing, found := existingByURL[page.URL]; found {
+					bookmarksSrv.MarkFailed(existing, err.Error())
+				} else {
+					b := bookmarksSrv.AddFailedBookmark(page.URL, err.Error())
+					bookmarkList.Bookmarks = append(bookmarkList.Bookmarks, *b)
+					existingByURL[page.URL] = b
+				}
 				stats.Failed++
 				continue
 			}
 
-			// Find and update bookmark
 			if existing, found := existingByURL[page.URL]; found {
 				bookmarksSrv.UpdateMetadata(existing, metadata)
 			} else {
-				// New bookmark
-				newBookmark := bookmarksSrv.AddBookmark(page.URL, metadata)
-				bookmarkList.Bookmarks = append(bookmarkList.Bookmarks, *newBookmark)
-				existingByURL[page.URL] = newBookmark
+				b := bookmarksSrv.AddBookmark(page.URL, metadata)
+				bookmarkList.Bookmarks = append(bookmarkList.Bookmarks, *b)
+				existingByURL[page.URL] = b
 			}
+		}
+
+		// URLs in toFetch that got no response — network error / timeout
+		for _, u := range toFetch {
+			if fetchedURLs[u] {
+				continue
+			}
+			if existing, found := existingByURL[u]; found {
+				bookmarksSrv.MarkFailed(existing, "fetch failed (network error or timeout)")
+			} else {
+				b := bookmarksSrv.AddFailedBookmark(u, "fetch failed (network error or timeout)")
+				bookmarkList.Bookmarks = append(bookmarkList.Bookmarks, *b)
+				existingByURL[u] = b
+			}
+			stats.Failed++
 		}
 	}
 
