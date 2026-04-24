@@ -32,6 +32,7 @@ func SyncCommand(args []string) {
 
 	fs := flag.NewFlagSet("sync", flag.ExitOnError)
 	dryRun := fs.Bool("dry-run", false, "Preview changes without writing files")
+	retryFailed := fs.Bool("retry-failed", false, "Re-fetch bookmarks that previously failed")
 	fs.Parse(args)
 
 	cfg := config.New()
@@ -92,7 +93,7 @@ func SyncCommand(args []string) {
 
 	// Sync Bookmarks
 	fmt.Println("\nBookmarks:")
-	bookmarkStats, err := syncBookmarks(srv, filepath.Join(cfg.NotesDir, "bookmarks.yml"), *dryRun)
+	bookmarkStats, err := syncBookmarks(srv, filepath.Join(cfg.NotesDir, "bookmarks.yml"), *dryRun, *retryFailed)
 	if err != nil {
 		fmt.Printf("  error syncing bookmarks: %v\n", err)
 		bookmarkStats = bookmarks.BookmarkStats{}
@@ -348,7 +349,7 @@ func extractUniqueURLs(srv notes.NoteService) (map[string]bool, error) {
 }
 
 // syncBookmarks discovers and syncs bookmarks from notes
-func syncBookmarks(srv notes.NoteService, bookmarksPath string, dryRun bool) (bookmarks.BookmarkStats, error) {
+func syncBookmarks(srv notes.NoteService, bookmarksPath string, dryRun bool, retryFailed bool) (bookmarks.BookmarkStats, error) {
 	stats := bookmarks.BookmarkStats{}
 
 	// Extract all unique URLs from notes
@@ -380,11 +381,13 @@ func syncBookmarks(srv notes.NoteService, bookmarksPath string, dryRun bool) (bo
 
 	// Categorize URLs: new, cached, need refresh
 	var toFetch []string
-	newBookmarks := []*bookmarks.Bookmark{}
 
 	for url := range discoveredURLs {
 		if existing, found := existingByURL[url]; found {
-			if bookmarksSrv.IsCached(existing) {
+			if existing.Status == "failed" && retryFailed {
+				stats.Fetched++
+				toFetch = append(toFetch, url)
+			} else if bookmarksSrv.IsCached(existing) {
 				stats.Cached++
 			} else {
 				stats.Updated++
@@ -393,12 +396,15 @@ func syncBookmarks(srv notes.NoteService, bookmarksPath string, dryRun bool) (bo
 		} else {
 			stats.Fetched++
 			toFetch = append(toFetch, url)
-			newBookmarks = append(newBookmarks, &bookmarks.Bookmark{URL: url})
 		}
 	}
 
 	if dryRun {
-		fmt.Printf("  would fetch %d new/stale URLs, reuse %d cached\n", len(toFetch), stats.Cached)
+		label := "new/stale"
+		if retryFailed {
+			label = "new/stale/failed"
+		}
+		fmt.Printf("  would fetch %d %s URLs, reuse %d cached\n", len(toFetch), label, stats.Cached)
 		fmt.Printf("  would save bookmarks.yml\n")
 		return stats, nil
 	}
